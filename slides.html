@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Circom — A 1-Hour Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<script type="module" src="./deck-stage.js"></script>
+<style>
+  :root{
+    --paper:#f4f1ea;
+    --paper-2:#ece7dc;
+    --ink:#13171c;
+    --ink-2:#2a2f37;
+    --muted:#6b6a64;
+    --rule:#1d2026;
+    --accent: oklch(0.62 0.13 230);   /* blueprint cyan */
+    --accent-2: oklch(0.62 0.13 30);  /* warm rust for code highlights */
+    --good: oklch(0.58 0.12 150);
+    --warn: oklch(0.62 0.16 60);
+    --danger: oklch(0.55 0.18 25);
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --serif: 'Fraunces', Georgia, serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0a0a0a;font-family:var(--sans);color:var(--ink)}
+  deck-stage > section{
+    width:1920px;height:1080px;background:var(--paper);
+    color:var(--ink);position:relative;overflow:hidden;
+    font-family:var(--sans);
+  }
+
+  /* ---------- shared chrome ---------- */
+  .chrome{
+    position:absolute;inset:0;pointer-events:none;
+    padding:48px 72px;display:flex;flex-direction:column;justify-content:space-between;
+    font-family:var(--mono);font-size:18px;color:var(--muted);
+    letter-spacing:0.02em;
+  }
+  .chrome .top, .chrome .bot{display:flex;justify-content:space-between;align-items:center}
+  .chrome .ink{color:var(--ink)}
+  .mark{display:inline-flex;align-items:center;gap:14px;font-weight:600;color:var(--ink);letter-spacing:0.04em}
+  .mark .dot{width:14px;height:14px;background:var(--ink);border-radius:50%;display:inline-block;position:relative}
+  .mark .dot::after{content:"";position:absolute;inset:3px;background:var(--paper);border-radius:50%}
+
+  /* page numbers / titles handled per slide */
+  .page-no{font-family:var(--mono);font-size:18px;color:var(--muted)}
+
+  /* ---------- typography ---------- */
+  h1.display{font-family:var(--serif);font-weight:600;font-size:140px;line-height:0.95;letter-spacing:-0.03em;margin:0}
+  h1.title{font-family:var(--serif);font-weight:600;font-size:108px;line-height:0.95;letter-spacing:-0.02em;margin:0}
+  h2.section{font-family:var(--serif);font-weight:600;font-size:148px;line-height:0.95;letter-spacing:-0.025em;margin:0}
+  h3.head{font-family:var(--sans);font-weight:600;font-size:54px;line-height:1.05;letter-spacing:-0.01em;margin:0}
+  .eyebrow{font-family:var(--mono);font-size:18px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted)}
+  .lede{font-family:var(--sans);font-size:32px;line-height:1.35;color:var(--ink-2);max-width:1200px}
+  .body{font-family:var(--sans);font-size:24px;line-height:1.45;color:var(--ink-2)}
+  .small{font-family:var(--mono);font-size:16px;color:var(--muted);letter-spacing:0.04em}
+
+  /* ---------- code block ---------- */
+  pre.code{
+    background:#0f1216;color:#e6e1d6;
+    font-family:var(--mono);font-size:22px;line-height:1.5;
+    padding:32px 36px;border-radius:6px;margin:0;
+    border:1px solid #1a1f25;
+    overflow:hidden;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+  }
+  pre.code .kw{color:#7cc4ff}
+  pre.code .ty{color:#f3c969}
+  pre.code .id{color:#e6e1d6}
+  pre.code .op{color:#ff9a6c}
+  pre.code .num{color:#c2e389}
+  pre.code .cm{color:#7a8088;font-style:italic}
+  pre.code .str{color:#c2e389}
+  pre.code .fn{color:#a3d8ff}
+  pre.code .danger{color:#ff7a7a}
+  pre.code .good{color:#9be0a8}
+
+  pre.code.small{font-size:18px}
+  pre.code.tiny{font-size:16px;line-height:1.45;padding:24px 28px}
+
+  /* ---------- agenda dot list ---------- */
+  ol.agenda{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+  ol.agenda li{
+    display:grid;grid-template-columns:80px 1fr 200px;gap:32px;align-items:baseline;
+    padding:14px 0;border-top:1px solid rgba(20,22,28,0.15);
+    font-family:var(--sans);font-size:30px;color:var(--ink);
+  }
+  ol.agenda li:last-child{border-bottom:1px solid rgba(20,22,28,0.15)}
+  ol.agenda li .num{font-family:var(--mono);font-size:22px;color:var(--muted);letter-spacing:0.04em}
+  ol.agenda li .min{font-family:var(--mono);font-size:20px;color:var(--muted);text-align:right}
+
+  /* ---------- two-col ---------- */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;align-items:start}
+  .col h4{font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin:0 0 18px 0}
+
+  /* ---------- pill / tag ---------- */
+  .pill{
+    display:inline-flex;align-items:center;gap:10px;
+    font-family:var(--mono);font-size:18px;letter-spacing:0.04em;
+    padding:8px 16px;border:1px solid var(--ink);border-radius:999px;color:var(--ink);background:transparent;
+  }
+  .pill.solid{background:var(--ink);color:var(--paper)}
+  .pill.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* ---------- frames ---------- */
+  .frame{border:1px solid rgba(20,22,28,0.15);background:rgba(255,255,255,0.45);border-radius:8px;padding:32px}
+  .frame.ink{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .frame.ink .small{color:#a8a59c}
+  .frame.danger{border-color:var(--danger);background:rgba(214,87,71,0.06)}
+  .frame.danger .badge{color:var(--danger)}
+  .frame.good{border-color:var(--good);background:rgba(80,150,90,0.06)}
+
+  /* ---------- key/val rows ---------- */
+  .kv{display:grid;grid-template-columns:240px 1fr;gap:16px 32px;font-family:var(--mono);font-size:20px;align-items:baseline}
+  .kv dt{color:var(--muted);letter-spacing:0.04em}
+  .kv dd{margin:0;color:var(--ink)}
+
+  /* ---------- diagrams ---------- */
+  .pipeline{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:0;align-items:stretch;
+    border:1px solid var(--ink);border-radius:8px;overflow:hidden;background:#fff;
+  }
+  .pipeline .step{padding:28px 24px;border-right:1px solid rgba(20,22,28,0.15);position:relative;display:flex;flex-direction:column;gap:8px;min-height:200px}
+  .pipeline .step:last-child{border-right:none}
+  .pipeline .step .n{font-family:var(--mono);font-size:14px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase}
+  .pipeline .step .t{font-family:var(--sans);font-size:26px;font-weight:600;color:var(--ink);line-height:1.1}
+  .pipeline .step .d{font-family:var(--mono);font-size:15px;color:var(--ink-2);line-height:1.4;margin-top:auto}
+  .pipeline .step.ink{background:var(--ink);color:var(--paper)}
+  .pipeline .step.ink .t, .pipeline .step.ink .d{color:var(--paper)}
+  .pipeline .step.ink .n{color:#a8a59c}
+
+  /* tree */
+  .tree{font-family:var(--mono);font-size:22px;line-height:1.6;color:var(--ink)}
+  .tree .node{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border:1px solid var(--ink);border-radius:8px;background:#fff}
+  .tree .node.leaf{background:var(--paper-2)}
+  .tree .node.target{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .tree .node.path{background:var(--ink);color:var(--paper)}
+
+  /* sudoku */
+  .sudoku{display:grid;grid-template-columns:repeat(9,1fr);width:540px;height:540px;border:2.5px solid var(--ink);background:#fff;font-family:var(--mono)}
+  .sudoku .c{display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid rgba(20,22,28,0.18);color:var(--ink)}
+  .sudoku .c.b-r{border-right:2.5px solid var(--ink)}
+  .sudoku .c.b-b{border-bottom:2.5px solid var(--ink)}
+  .sudoku .c.given{background:var(--paper-2);font-weight:600}
+  .sudoku .c.priv{color:var(--accent)}
+
+  /* badge */
+  .badge{font-family:var(--mono);font-size:16px;letter-spacing:0.16em;text-transform:uppercase;font-weight:700}
+
+  /* horizontal rule */
+  .rule{height:1px;background:rgba(20,22,28,0.18);width:100%}
+
+  /* slide layout helpers */
+  .slide-pad{position:absolute;inset:0;padding:110px 144px 130px}
+  .slide-pad-tight{position:absolute;inset:0;padding:96px 120px 110px}
+
+  /* dotted underline accent */
+  .ul-accent{background-image: linear-gradient(to right, var(--ink) 50%, transparent 0%);background-position: bottom; background-size: 8px 1.5px; background-repeat: repeat-x; padding-bottom: 6px}
+
+  /* code caption */
+  .caption{font-family:var(--mono);font-size:18px;color:var(--muted);letter-spacing:0.04em}
+
+  /* big number */
+  .bignum{font-family:var(--serif);font-size:240px;line-height:0.9;letter-spacing:-0.04em;color:var(--ink);font-weight:600}
+
+  /* arrow */
+  .arrow{display:inline-block;width:28px;height:2px;background:var(--ink);position:relative;vertical-align:middle}
+  .arrow::after{content:"";position:absolute;right:0;top:-5px;border:6px solid transparent;border-left-color:var(--ink)}
+
+  /* lined paragraph list */
+  ul.dash{list-style:none;padding:0;margin:0}
+  ul.dash li{position:relative;padding-left:36px;margin:14px 0;font-size:24px;line-height:1.4;color:var(--ink-2)}
+  ul.dash li::before{content:"";position:absolute;left:0;top:14px;width:20px;height:1.5px;background:var(--ink)}
+
+  /* meter dot grid */
+  .grid-bg{
+    background-image:
+      radial-gradient(rgba(20,22,28,0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: 0 0;
+  }
+</style>
+<script type="application/json" id="speaker-notes">
+[]
+</script>
+</head>
+<body>
+
+<deck-stage>
+
+<!-- ============================================================== -->
+<!-- 01 COVER                                                       -->
+<!-- ============================================================== -->
+<section data-screen-label="01 Cover">
+  <div class="chrome">
+    <div class="top">
+      <span class="mark"><span class="dot"></span>CIRCOM / 60-MIN WORKSHOP</span>
+      <span>v1 · live session</span>
+    </div>
+    <div class="bot">
+      <span>iden3 · circomlib · snarkjs</span>
+      <span class="page-no">01 / 24</span>
+    </div>
+  </div>
+
+  <div class="slide-pad" style="display:flex;flex-direction:column;justify-content:flex-end;gap:48px">
+    <div class="eyebrow">A step-by-step tutorial · 60 minutes · hands-on</div>
+    <h1 class="display">
+      Circom,<br/>
+      from <em style="font-style:italic;color:var(--accent)">zero</em><br/>
+      to a working circuit.
+    </h1>
+    <div class="two-col" style="grid-template-columns:1fr 1fr;align-items:end">
+      <p class="lede" style="margin:0">
+        Write constraints. Compile to R1CS. Generate a Groth16 proof.
+        Build something real — Poseidon, a Merkle membership proof, and a ZK Sudoku — together, in one hour.
+      </p>
+      <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">
+        <span class="pill">poseidon</span>
+        <span class="pill">merkle</span>
+        <span class="pill">zk-sudoku</span>
+        <span class="pill solid">tornado · homework</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 02 PRE-FLIGHT CHECKLIST                                        -->
+<!-- ============================================================== -->
+<section data-screen-label="02 Pre-flight">
+  <div class="chrome">
+    <div class="top">
+      <span class="mark"><span class="dot"></span>BEFORE THE LECTURE</span>
+      <span>~10 min setup, done at home</span>
+    </div>
+    <div class="bot"><span>Pre-flight checklist</span><span class="page-no">02 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">§0 · Pre-flight</div>
+    <h1 class="title" style="margin-top:18px">Install &amp; download<br/>before we start.</h1>
+
+    <div class="two-col" style="margin-top:48px">
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">A · Toolchain</h4>
+        <pre class="code tiny" style="margin-top:14px"><span class="cm"># 1. Rust (circom is written in Rust)</span>
+curl --proto '=https' --tlsv1.2 -sSf \
+  https://sh.rustup.rs | sh
+
+<span class="cm"># 2. circom 2.x — clone &amp; build</span>
+git clone https://github.com/iden3/circom.git
+cd circom &amp;&amp; cargo build --release
+cargo install --path circom
+
+<span class="cm"># 3. snarkjs (proving / verifying)</span>
+npm install -g snarkjs
+
+<span class="cm"># sanity check</span>
+circom  --version
+snarkjs --version</pre>
+      </div>
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">B · Powers of Tau</h4>
+        <pre class="code tiny" style="margin-top:14px"><span class="cm"># Trusted-setup ceremony output.</span>
+<span class="cm"># 2^14 ≈ 16k constraints — fine for today.</span>
+
+wget https://hermez.s3-eu-west-1.amazonaws.com/\
+powersOfTau28_hez_final_14.ptau
+
+ls -lh powersOfTau28_hez_final_14.ptau
+<span class="cm"># → 9.2M  ✔</span></pre>
+        <ul class="dash" style="margin-top:18px">
+          <li><strong>2^14</strong> — small demos (today).</li>
+          <li><strong>2^20</strong> — production circuits.</li>
+          <li>Reused across circuits — download once.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="frame" style="margin-top:32px;display:flex;justify-content:space-between;align-items:center">
+      <span class="small">Stuck on install? Raise your hand — a TA will pair with you while we keep moving.</span>
+      <span class="pill solid">10 min buffer</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 03 AGENDA                                                      -->
+<!-- ============================================================== -->
+<section data-screen-label="03 Agenda">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>AGENDA</span><span>60 minutes total</span></div>
+    <div class="bot"><span>What we&rsquo;ll do today</span><span class="page-no">03 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">§ · The hour</div>
+    <h1 class="title" style="margin-top:18px;max-width:1500px">One hour. Four circuits. <em style="color:var(--accent);font-style:italic">No magic.</em></h1>
+
+    <ol class="agenda" style="margin-top:48px">
+      <li><span class="num">01</span><span>Circom syntax — signals, constraints, templates</span><span class="min">8 min</span></li>
+      <li><span class="num">02</span><span>The compile pipeline — prover &amp; verifier explained</span><span class="min">7 min</span></li>
+      <li><span class="num">03</span><span>zkrepl.dev — write and prove in your browser</span><span class="min">3 min</span></li>
+      <li><span class="num">04</span><span>Build · Poseidon hash</span><span class="min">8 min</span></li>
+      <li><span class="num">05</span><span>Build · Merkle-tree membership</span><span class="min">10 min</span></li>
+      <li><span class="num">06</span><span>Build · Private membership (mixed-secret leaf)</span><span class="min">7 min</span></li>
+      <li><span class="num">07</span><span>Build · ZK Sudoku</span><span class="min">10 min</span></li>
+      <li><span class="num">08</span><span>Security pitfalls &amp; the Tornado Cash homework</span><span class="min">7 min</span></li>
+    </ol>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 04 SECTION DIVIDER · §1 SYNTAX                                  -->
+<!-- ============================================================== -->
+<section data-screen-label="04 §1 Syntax" style="background:var(--ink);color:var(--paper)">
+  <div class="chrome">
+    <div class="top">
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">§1 · CIRCOM SYNTAX</span></span>
+      <span style="color:#a8a59c">8 minutes</span>
+    </div>
+    <div class="bot"><span style="color:#a8a59c">Signals · constraints · templates</span><span class="page-no" style="color:#a8a59c">04 / 24</span></div>
+  </div>
+
+  <div class="slide-pad" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="eyebrow" style="color:#a8a59c">Section one</div>
+    <h2 class="section" style="margin-top:24px;color:var(--paper)">A circuit is<br/>a system of<br/><em style="font-style:italic;color:var(--accent)">constraints</em>.</h2>
+    <p class="lede" style="color:#cfccc4;margin-top:48px;max-width:1100px">
+      Not a program. Not a function. A set of polynomial equations
+      that some witness must satisfy. Circom is just a nicer way to write them down.
+    </p>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 05 THREE OPERATORS                                             -->
+<!-- ============================================================== -->
+<section data-screen-label="05 Three operators">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§1 · SYNTAX</span><span>The three operators</span></div>
+    <div class="bot"><span>Compute vs. constrain — pick deliberately</span><span class="page-no">05 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">The three operators that trip everyone up</div>
+    <h1 class="title" style="margin-top:18px"><code style="font-family:var(--mono);font-size:0.7em">&lt;-- &nbsp; === &nbsp; &lt;==</code></h1>
+
+    <div class="three-col" style="margin-top:64px">
+      <div class="frame">
+        <span class="badge" style="color:var(--muted)">ASSIGN ONLY</span>
+        <h3 class="head" style="margin-top:12px;font-family:var(--mono);font-size:64px">&lt;--</h3>
+        <p class="body" style="margin-top:16px">Computes a value for a signal. <strong>No constraint</strong> is added. Used for witness-only helpers.</p>
+        <pre class="code tiny" style="margin-top:18px">out &lt;-- in / 7;</pre>
+        <p class="small" style="margin-top:14px;color:var(--danger)">⚠ Dangerous on its own — the prover can lie.</p>
+      </div>
+      <div class="frame">
+        <span class="badge" style="color:var(--muted)">CONSTRAIN ONLY</span>
+        <h3 class="head" style="margin-top:12px;font-family:var(--mono);font-size:64px">===</h3>
+        <p class="body" style="margin-top:16px">Adds a constraint. Both sides must be equal in <em>every</em> valid witness.</p>
+        <pre class="code tiny" style="margin-top:18px">out * 7 === in;</pre>
+        <p class="small" style="margin-top:14px;color:var(--muted)">Pure equation — no assignment.</p>
+      </div>
+      <div class="frame" style="border-color:var(--accent);background:rgba(58,135,188,0.06)">
+        <span class="badge" style="color:var(--accent)">ASSIGN + CONSTRAIN</span>
+        <h3 class="head" style="margin-top:12px;font-family:var(--mono);font-size:64px">&lt;==</h3>
+        <p class="body" style="margin-top:16px">The one you want 95% of the time. Computes <em>and</em> constrains in one stroke.</p>
+        <pre class="code tiny" style="margin-top:18px">c &lt;== a * b;</pre>
+        <p class="small" style="margin-top:14px;color:var(--good)">✓ Default choice. Reach for this first.</p>
+      </div>
+    </div>
+
+    <div class="frame ink" style="margin-top:48px;display:flex;align-items:center;justify-content:space-between">
+      <span class="small" style="color:#cfccc4">Rule of thumb&nbsp;&nbsp;·&nbsp;&nbsp;</span>
+      <span style="font-family:var(--mono);font-size:22px;color:var(--paper)">If the prover could cheat by assigning a wrong value, you used <span style="color:var(--danger)">&lt;--</span> when you should have used <span style="color:var(--accent)">&lt;==</span>.</span>
+      <span class="pill solid" style="background:var(--paper);color:var(--ink)">remember</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 06 HELLO TEMPLATE                                              -->
+<!-- ============================================================== -->
+<section data-screen-label="06 Hello template">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§1 · SYNTAX</span><span>Templates &amp; signals</span></div>
+    <div class="bot"><span>multiplier.circom</span><span class="page-no">06 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">A template is the unit of reuse — like a class</div>
+    <h1 class="title" style="margin-top:18px;font-size:88px">Hello, Multiplier.</h1>
+
+    <div class="two-col" style="margin-top:48px;grid-template-columns:1.1fr 1fr;gap:80px">
+      <div>
+        <pre class="code">pragma circom 2.1.6;
+
+<span class="kw">template</span> <span class="fn">Multiplier</span>() {
+    <span class="kw">signal input</span>  a;
+    <span class="kw">signal input</span>  b;
+    <span class="kw">signal output</span> c;
+
+    c <span class="op">&lt;==</span> a <span class="op">*</span> b;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [a]} = <span class="fn">Multiplier</span>();</pre>
+        <p class="caption" style="margin-top:18px">↑ A complete, valid Circom program.</p>
+      </div>
+
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">What to notice</h4>
+        <ul class="dash" style="margin-top:18px">
+          <li><strong>signal</strong> — an unknown in the system; can be <em>input</em>, <em>output</em>, or intermediate.</li>
+          <li><strong>template</strong> — parameterized circuit; instantiated with <code style="font-family:var(--mono)">component</code>.</li>
+          <li><strong>main</strong> — exactly one entry point per circuit.</li>
+          <li><strong>public&nbsp;[a]</strong> — which inputs the verifier sees. Everything else is private.</li>
+          <li>One <code style="font-family:var(--mono)">&lt;==</code> here = one R1CS constraint after compile.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 07 R1CS — BIG IDEA                                             -->
+<!-- ============================================================== -->
+<section data-screen-label="07 R1CS big idea" class="grid-bg">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§1 · SYNTAX</span><span>The R1CS shape</span></div>
+    <div class="bot"><span>Why every constraint is quadratic</span><span class="page-no">07 / 24</span></div>
+  </div>
+
+  <div class="slide-pad" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="eyebrow">Every constraint must fit one shape</div>
+    <h1 class="title" style="margin-top:18px;font-family:var(--mono);font-size:128px;line-height:1">
+      <span style="color:var(--ink)">(</span>A·s<span style="color:var(--ink)">)</span>
+      <span style="color:var(--accent)">×</span>
+      <span style="color:var(--ink)">(</span>B·s<span style="color:var(--ink)">)</span>
+      <span style="color:var(--accent)">=</span>
+      <span style="color:var(--ink)">(</span>C·s<span style="color:var(--ink)">)</span>
+    </h1>
+
+    <p class="lede" style="margin-top:48px;max-width:1400px">
+      <strong>R1CS</strong> = Rank-1 Constraint System. <em>s</em> is the witness vector;
+      <em>A, B, C</em> are sparse coefficient vectors. Each constraint is the product of two linear combinations.
+    </p>
+
+    <div class="three-col" style="margin-top:56px">
+      <div class="frame"><span class="badge" style="color:var(--muted)">LEGAL</span>
+        <pre class="code tiny" style="margin-top:14px">c &lt;== a * b;
+y &lt;== 3*x + 5;        <span class="cm">// linear is fine</span>
+z &lt;== (a+b) * (c+d);</pre></div>
+      <div class="frame" style="border-color:var(--danger)"><span class="badge" style="color:var(--danger)">ILLEGAL</span>
+        <pre class="code tiny" style="margin-top:14px">y &lt;== a * b * c;      <span class="cm">// degree 3</span>
+y &lt;== a / b;          <span class="cm">// not quadratic</span></pre></div>
+      <div class="frame"><span class="badge" style="color:var(--muted)">FIX</span>
+        <pre class="code tiny" style="margin-top:14px">signal ab;
+ab &lt;== a * b;
+y  &lt;== ab * c;        <span class="cm">// split into 2</span></pre></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 08 §2 SECTION DIVIDER — COMPILE PIPELINE                       -->
+<!-- ============================================================== -->
+<section data-screen-label="08 §2 Pipeline" style="background:var(--ink);color:var(--paper)">
+  <div class="chrome">
+    <div class="top"><span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">§2 · COMPILE PIPELINE</span></span><span style="color:#a8a59c">7 minutes</span></div>
+    <div class="bot"><span style="color:#a8a59c">.circom → .r1cs → .wasm → .zkey → proof</span><span class="page-no" style="color:#a8a59c">08 / 24</span></div>
+  </div>
+  <div class="slide-pad" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="eyebrow" style="color:#a8a59c">Section two</div>
+    <h2 class="section" style="margin-top:24px;color:var(--paper)">What actually<br/>happens when<br/>you <em style="color:var(--accent);font-style:italic">circom</em>.</h2>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 09 PIPELINE DIAGRAM                                            -->
+<!-- ============================================================== -->
+<section data-screen-label="09 Pipeline diagram">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§2 · PIPELINE</span><span>5 stages, 2 actors</span></div>
+    <div class="bot"><span>Where prover &amp; verifier come in</span><span class="page-no">09 / 24</span></div>
+  </div>
+
+  <div class="slide-pad-tight">
+    <div class="eyebrow">From circuit source to a verified proof on-chain</div>
+    <h1 class="title" style="margin-top:14px;font-size:84px">The pipeline.</h1>
+
+    <div class="pipeline" style="margin-top:48px">
+      <div class="step">
+        <span class="n">01 — Author</span>
+        <span class="t">Write<br/>circuit</span>
+        <span class="d">circuit.circom<br/><span style="color:var(--muted)">templates &amp; signals</span></span>
+      </div>
+      <div class="step">
+        <span class="n">02 — circom</span>
+        <span class="t">Compile</span>
+        <span class="d">.r1cs · .wasm · .sym<br/><span style="color:var(--muted)">circom circuit.circom --r1cs --wasm</span></span>
+      </div>
+      <div class="step ink">
+        <span class="n">03 — snarkjs</span>
+        <span class="t">Trusted<br/>setup</span>
+        <span class="d">ptau + r1cs → .zkey<br/>vkey.json<br/><span style="color:#a8a59c">groth16 setup + contribute</span></span>
+      </div>
+      <div class="step">
+        <span class="n">04 — Prover</span>
+        <span class="t">Generate<br/>witness + proof</span>
+        <span class="d">inputs.json → witness.wtns<br/>→ proof.json + public.json</span>
+      </div>
+      <div class="step">
+        <span class="n">05 — Verifier</span>
+        <span class="t">Verify</span>
+        <span class="d">vkey + proof + public<br/><span style="color:var(--muted)">snarkjs / Solidity contract</span></span>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:56px;gap:48px">
+      <div class="frame">
+        <span class="badge" style="color:var(--accent)">PROVER · runs locally, holds secrets</span>
+        <p class="body" style="margin-top:14px">Has private inputs (the witness). Runs the .wasm to compute every signal, then uses the .zkey to produce a proof. <strong>Heavy compute, runs once per claim.</strong></p>
+      </div>
+      <div class="frame">
+        <span class="badge" style="color:var(--ink)">VERIFIER · runs anywhere, public</span>
+        <p class="body" style="margin-top:14px">Has only the verification key + the public inputs + the proof. Outputs <code style="font-family:var(--mono)">true</code> or <code style="font-family:var(--mono)">false</code>. <strong>Cheap, succinct — milliseconds, kilobytes.</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 10 COMMAND CHEATSHEET                                          -->
+<!-- ============================================================== -->
+<section data-screen-label="10 Command cheatsheet">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§2 · PIPELINE</span><span>Cheatsheet</span></div>
+    <div class="bot"><span>The seven commands that ship a proof</span><span class="page-no">10 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">Bookmark this slide — it&rsquo;s the entire workflow</div>
+    <h1 class="title" style="margin-top:18px;font-size:80px">Seven commands.</h1>
+
+    <pre class="code small" style="margin-top:48px"><span class="cm"># 1. compile circuit → r1cs + wasm</span>
+circom circuit.circom --r1cs --wasm --sym
+
+<span class="cm"># 2. setup phase 2 (uses ptau from pre-flight)</span>
+snarkjs groth16 setup circuit.r1cs powersOfTau28_hez_final_14.ptau circuit_0000.zkey
+
+<span class="cm"># 3. contribute entropy (each prover adds randomness)</span>
+snarkjs zkey contribute circuit_0000.zkey circuit_final.zkey --name="me" -v
+
+<span class="cm"># 4. export the verification key (public, tiny, reused forever)</span>
+snarkjs zkey export verificationkey circuit_final.zkey verification_key.json
+
+<span class="cm"># 5. compute witness from your private inputs</span>
+node circuit_js/generate_witness.js circuit_js/circuit.wasm input.json witness.wtns
+
+<span class="cm"># 6. produce the proof</span>
+snarkjs groth16 prove circuit_final.zkey witness.wtns proof.json public.json
+
+<span class="cm"># 7. verify (anyone can do this — no secrets needed)</span>
+snarkjs groth16 verify verification_key.json public.json proof.json
+<span class="good"># [INFO]  snarkJS: OK!</span></pre>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 11 zkREPL                                                      -->
+<!-- ============================================================== -->
+<section data-screen-label="11 zkREPL">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§3 · zkREPL.dev</span><span>Browser playground</span></div>
+    <div class="bot"><span>Skip the seven commands while you learn</span><span class="page-no">11 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">All seven commands → one button</div>
+    <h1 class="title" style="margin-top:18px;font-size:96px">Meet <em style="color:var(--accent);font-style:italic">zkrepl.dev</em>.</h1>
+
+    <div class="two-col" style="margin-top:56px;grid-template-columns:1.2fr 1fr;gap:80px">
+      <div class="frame ink" style="padding:0;overflow:hidden">
+        <!-- mock browser -->
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 18px;background:#0a0d11;border-bottom:1px solid #1a1f25">
+          <span style="width:12px;height:12px;background:#ff5f57;border-radius:50%"></span>
+          <span style="width:12px;height:12px;background:#febc2e;border-radius:50%"></span>
+          <span style="width:12px;height:12px;background:#28c840;border-radius:50%"></span>
+          <span style="margin-left:18px;font-family:var(--mono);font-size:14px;color:#7a8088">zkrepl.dev — multiplier.circom</span>
+        </div>
+        <pre class="code small" style="border-radius:0;border:none;margin:0">pragma circom 2.1.6;
+
+<span class="kw">template</span> <span class="fn">Multiplier</span>() {
+    <span class="kw">signal input</span>  a;
+    <span class="kw">signal input</span>  b;
+    <span class="kw">signal output</span> c;
+    c <span class="op">&lt;==</span> a <span class="op">*</span> b;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [a]} = <span class="fn">Multiplier</span>();
+
+<span class="cm">/* INPUT = { "a": "3", "b": "11" } */</span>
+
+<span class="good">✓ compiled · 1 constraint
+✓ witness ok · c = 33
+✓ groth16 proof generated in 142ms</span></pre>
+      </div>
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">Why we use it for teaching</h4>
+        <ul class="dash" style="margin-top:18px">
+          <li>Compiles &amp; proves in your browser — no toolchain.</li>
+          <li>Inputs live in a comment — easy to share circuits as a single file.</li>
+          <li>Built-in <code style="font-family:var(--mono)">circomlib</code> — <code style="font-family:var(--mono)">include "circomlib/poseidon.circom";</code> just works.</li>
+          <li>Constraint count printed live — feel the cost of your code.</li>
+        </ul>
+        <div class="frame danger" style="margin-top:32px">
+          <span class="badge">CAVEAT</span>
+          <p class="body" style="margin-top:8px;font-size:22px">zkREPL silently does <code style="font-family:var(--mono)">input % p</code> on every input, so it <strong>cannot reproduce overflow bugs</strong>. Real snarkjs will. Don&rsquo;t skip the local toolchain forever.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 12 §4 BUILD · POSEIDON DIVIDER                                 -->
+<!-- ============================================================== -->
+<section data-screen-label="12 §4 Build" style="background:var(--ink);color:var(--paper)">
+  <div class="chrome">
+    <div class="top"><span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">§4 · BUILD #1</span></span><span style="color:#a8a59c">8 minutes</span></div>
+    <div class="bot"><span style="color:#a8a59c">poseidon.circom</span><span class="page-no" style="color:#a8a59c">12 / 24</span></div>
+  </div>
+  <div class="slide-pad" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="eyebrow" style="color:#a8a59c">Build one — the hash you&rsquo;ll use everywhere</div>
+    <h2 class="section" style="margin-top:24px;color:var(--paper)">Poseidon.<br/><em style="color:var(--accent);font-style:italic">SNARK-friendly</em><br/>by design.</h2>
+    <p class="lede" style="color:#cfccc4;margin-top:48px;max-width:1100px">
+      Keccak inside a SNARK costs ~150k constraints. Poseidon does the same job in ~200.
+      That&rsquo;s why every Circom project ends up using it.
+    </p>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 13 POSEIDON CIRCUIT                                            -->
+<!-- ============================================================== -->
+<section data-screen-label="13 Poseidon circuit">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§4 · POSEIDON</span><span>Importing from circomlib</span></div>
+    <div class="bot"><span>~213 constraints for Poseidon(2)</span><span class="page-no">13 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">You almost never write a hash from scratch — you import one</div>
+    <h1 class="title" style="margin-top:18px;font-size:80px">Hash two secrets.</h1>
+
+    <div class="two-col" style="margin-top:48px;grid-template-columns:1.2fr 1fr;gap:80px">
+      <pre class="code"><span class="cm">// hash2.circom</span>
+pragma circom 2.1.6;
+
+<span class="kw">include</span> <span class="str">"circomlib/circuits/poseidon.circom"</span>;
+
+<span class="kw">template</span> <span class="fn">Hash2</span>() {
+    <span class="kw">signal input</span>  left;
+    <span class="kw">signal input</span>  right;
+    <span class="kw">signal output</span> out;
+
+    <span class="kw">component</span> h = <span class="fn">Poseidon</span>(2);
+    h.inputs[0] <span class="op">&lt;==</span> left;
+    h.inputs[1] <span class="op">&lt;==</span> right;
+    out <span class="op">&lt;==</span> h.<span class="ty">out</span>;
+}
+
+<span class="kw">component main</span> = <span class="fn">Hash2</span>();
+
+<span class="cm">/* INPUT = { "left": "7", "right": "42" } */</span></pre>
+
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">What we just did</h4>
+        <ul class="dash" style="margin-top:18px">
+          <li><strong>Poseidon(n)</strong> — a parameterized template; <code style="font-family:var(--mono)">n</code> is the arity (number of inputs).</li>
+          <li>Components are wired by assigning <em>their</em> input signals with <code style="font-family:var(--mono)">&lt;==</code>.</li>
+          <li>Output is read off <code style="font-family:var(--mono)">h.out</code>.</li>
+          <li>This is the brick we'll stack into a Merkle tree on the next slide.</li>
+        </ul>
+        <div class="frame" style="margin-top:32px;background:var(--paper-2)">
+          <dl class="kv">
+            <dt>constraints</dt><dd>≈ 213</dd>
+            <dt>prove time</dt><dd>~ 50 ms</dd>
+            <dt>output</dt><dd style="color:var(--accent)">a single field element</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 14 §5 MERKLE DIVIDER + TREE DIAGRAM                            -->
+<!-- ============================================================== -->
+<section data-screen-label="14 Merkle diagram">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§5 · BUILD #2 · MERKLE MEMBERSHIP</span><span>10 minutes</span></div>
+    <div class="bot"><span>Prove "I'm in the set" without saying who you are</span><span class="page-no">14 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">The most useful 30 lines of Circom you&rsquo;ll ever write</div>
+    <h1 class="title" style="margin-top:18px;font-size:80px">Merkle membership.</h1>
+
+    <div class="two-col" style="margin-top:48px;grid-template-columns:1fr 1fr;gap:80px;align-items:center">
+      <!-- tree visual -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:32px">
+        <div class="tree" style="display:flex;gap:120px"><span class="node target">root</span></div>
+        <div class="tree" style="display:flex;gap:60px">
+          <span class="node">h₂</span>
+          <span class="node path">h₃</span>
+        </div>
+        <div class="tree" style="display:flex;gap:30px">
+          <span class="node">h₀</span>
+          <span class="node">h₁</span>
+          <span class="node path">h₄</span>
+          <span class="node">h₅</span>
+        </div>
+        <div class="tree" style="display:flex;gap:8px">
+          <span class="node leaf">a</span><span class="node leaf">b</span>
+          <span class="node leaf">c</span><span class="node leaf">d</span>
+          <span class="node target">★</span><span class="node leaf">f</span>
+          <span class="node leaf">g</span><span class="node leaf">h</span>
+        </div>
+        <p class="caption" style="text-align:center;max-width:560px">Public: the root.&nbsp; Private: the leaf <strong style="color:var(--accent)">★</strong>, plus the sibling on each level (<strong style="color:var(--ink)">filled</strong>) and which side it sat on.</p>
+      </div>
+
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">The claim</h4>
+        <p class="lede" style="margin-top:14px;font-size:30px">
+          &ldquo;I know a leaf in the tree with this root,
+          but I won&rsquo;t tell you which one.&rdquo;
+        </p>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-top:48px">The recipe</h4>
+        <ol style="font-family:var(--sans);font-size:24px;line-height:1.5;color:var(--ink-2);padding-left:24px;margin-top:14px">
+          <li>Start with the leaf as your <em>cursor</em>.</li>
+          <li>For each level, hash <em>cursor</em> with that level&rsquo;s sibling.</li>
+          <li>The <em>side</em> bit decides ordering: <code style="font-family:var(--mono)">left/right</code>.</li>
+          <li>After <em>depth</em> rounds, assert cursor == public root.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 15 MERKLE CIRCUIT CODE                                         -->
+<!-- ============================================================== -->
+<section data-screen-label="15 Merkle code">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§5 · MERKLE</span><span>The whole circuit</span></div>
+    <div class="bot"><span>~30 lines, ~4k constraints at depth 20</span><span class="page-no">15 / 24</span></div>
+  </div>
+
+  <div class="slide-pad" style="padding-top:70px;padding-bottom:70px">
+    <div class="eyebrow">All of the cryptographic interesting-ness fits on one screen</div>
+    <h1 class="title" style="margin-top:8px;font-size:44px">merkle.circom</h1>
+
+    <div class="two-col" style="margin-top:18px;grid-template-columns:1.4fr 1fr;gap:48px">
+      <pre class="code" style="font-size:14px;line-height:1.4;padding:20px 24px">pragma circom 2.1.6;
+<span class="kw">include</span> <span class="str">"circomlib/circuits/poseidon.circom"</span>;
+
+<span class="cm">// Pick the correct ordering for one Merkle level.</span>
+<span class="kw">template</span> <span class="fn">DualMux</span>() {
+    <span class="kw">signal input</span>  in[2];
+    <span class="kw">signal input</span>  s;     <span class="cm">// 0 = leaf left, 1 = leaf right</span>
+    <span class="kw">signal output</span> out[2];
+
+    s <span class="op">*</span> (1 <span class="op">-</span> s) <span class="op">===</span> 0;       <span class="cm">// force s ∈ {0,1}</span>
+    out[0] <span class="op">&lt;==</span> (in[1] <span class="op">-</span> in[0]) <span class="op">*</span> s <span class="op">+</span> in[0];
+    out[1] <span class="op">&lt;==</span> (in[0] <span class="op">-</span> in[1]) <span class="op">*</span> s <span class="op">+</span> in[1];
+}
+
+<span class="kw">template</span> <span class="fn">MerkleProof</span>(depth) {
+    <span class="kw">signal input</span>  leaf;
+    <span class="kw">signal input</span>  pathElements[depth];
+    <span class="kw">signal input</span>  pathIndices[depth];
+    <span class="kw">signal output</span> root;
+
+    <span class="kw">component</span> mux[depth];
+    <span class="kw">component</span> hash[depth];
+    <span class="kw">signal</span>    cursor[depth + 1];
+    cursor[0] <span class="op">&lt;==</span> leaf;
+
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; depth; i++) {
+        mux[i] = <span class="fn">DualMux</span>();
+        mux[i].in[0] <span class="op">&lt;==</span> cursor[i];
+        mux[i].in[1] <span class="op">&lt;==</span> pathElements[i];
+        mux[i].s     <span class="op">&lt;==</span> pathIndices[i];
+
+        hash[i] = <span class="fn">Poseidon</span>(2);
+        hash[i].inputs[0] <span class="op">&lt;==</span> mux[i].out[0];
+        hash[i].inputs[1] <span class="op">&lt;==</span> mux[i].out[1];
+        cursor[i + 1] <span class="op">&lt;==</span> hash[i].<span class="ty">out</span>;
+    }
+    root <span class="op">&lt;==</span> cursor[depth];
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [root]} = <span class="fn">MerkleProof</span>(20);</pre>
+
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">Read it twice</h4>
+        <ul class="dash" style="margin-top:14px">
+          <li><strong>DualMux</strong> — a tiny gadget. <code style="font-family:var(--mono)">s*(1-s)===0</code> is the canonical &ldquo;is a bit&rdquo; constraint — without it, the prover could choose <code style="font-family:var(--mono)">s = 7</code>.</li>
+          <li><strong>cursor[]</strong> — array of intermediate signals; declared once, written once.</li>
+          <li><strong>for-loop</strong> — unrolled at compile time. <em>depth</em> is a compile-time parameter, not a runtime one.</li>
+          <li><strong>Public:</strong> only <code style="font-family:var(--mono)">root</code>. The leaf and path stay private.</li>
+        </ul>
+        <div class="frame ink" style="margin-top:32px">
+          <span class="badge" style="color:var(--accent)">COST</span>
+          <dl class="kv" style="margin-top:8px;color:var(--paper);grid-template-columns:160px 1fr"><dt style="color:#a8a59c">depth=20</dt><dd style="color:var(--paper)">~ 4,300 constraints</dd><dt style="color:#a8a59c">prove time</dt><dd style="color:var(--paper)">~ 1 s on a laptop</dd></dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 16 PRIVATE MEMBERSHIP — MIXED LEAF                             -->
+<!-- ============================================================== -->
+<section data-screen-label="16 Private membership">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§6 · BUILD #3</span><span>Private membership · mixed-secret leaf</span></div>
+    <div class="bot"><span>The trick that makes mixers possible</span><span class="page-no">16 / 24</span></div>
+  </div>
+
+  <div class="slide-pad" style="padding-top:80px;padding-bottom:80px">
+    <div class="eyebrow">A leaf isn&rsquo;t the user — it&rsquo;s a commitment to the user</div>
+    <h1 class="title" style="margin-top:10px;font-size:60px">Mix the secret in.</h1>
+
+    <div class="two-col" style="margin-top:24px;grid-template-columns:1fr 1.1fr;gap:48px">
+      <div>
+        <p class="body" style="font-size:26px;max-width:680px">
+          A bare-leaf membership proof shows that <em>some leaf</em> is in the set.
+          Anyone watching deposits can correlate withdrawals to deposits 1-to-1.
+        </p>
+        <p class="body" style="font-size:26px;margin-top:18px;max-width:680px">
+          Fix it: a leaf is the hash of a <strong>nullifier</strong> + a <strong>secret</strong>.
+          The nullifier becomes a public single-use marker on withdraw — the secret stays hidden forever.
+        </p>
+
+        <div class="frame" style="margin-top:36px;background:var(--paper-2)">
+          <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin:0">The two-hash idea</h4>
+          <pre class="code tiny" style="margin-top:14px;background:#0f1216;color:#e6e1d6">commitment      = Poseidon(nullifier, secret)
+nullifierHash   = Poseidon(nullifier)
+
+<span class="cm">// On withdraw, prove:</span>
+<span class="cm">// 1. commitment is in tree under public root</span>
+<span class="cm">// 2. nullifierHash matches the public one</span>
+<span class="cm">// → contract records nullifierHash → no double-spend</span></pre>
+        </div>
+      </div>
+
+      <pre class="code" style="font-size:15px;line-height:1.4;padding:22px 26px">pragma circom 2.1.6;
+<span class="kw">include</span> <span class="str">"circomlib/circuits/poseidon.circom"</span>;
+<span class="kw">include</span> <span class="str">"./merkle.circom"</span>;
+
+<span class="kw">template</span> <span class="fn">Withdraw</span>(depth) {
+    <span class="cm">// private</span>
+    <span class="kw">signal input</span>  nullifier;
+    <span class="kw">signal input</span>  secret;
+    <span class="kw">signal input</span>  pathElements[depth];
+    <span class="kw">signal input</span>  pathIndices[depth];
+    <span class="cm">// public</span>
+    <span class="kw">signal input</span>  root;
+    <span class="kw">signal input</span>  nullifierHash;
+
+    <span class="cm">// 1. commitment = Poseidon(nullifier, secret)</span>
+    <span class="kw">component</span> cm = <span class="fn">Poseidon</span>(2);
+    cm.inputs[0] <span class="op">&lt;==</span> nullifier;
+    cm.inputs[1] <span class="op">&lt;==</span> secret;
+
+    <span class="cm">// 2. that commitment is the leaf in the tree</span>
+    <span class="kw">component</span> tree = <span class="fn">MerkleProof</span>(depth);
+    tree.leaf <span class="op">&lt;==</span> cm.<span class="ty">out</span>;
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; depth; i++) {
+        tree.pathElements[i] <span class="op">&lt;==</span> pathElements[i];
+        tree.pathIndices[i]  <span class="op">&lt;==</span> pathIndices[i];
+    }
+    tree.root <span class="op">===</span> root;
+
+    <span class="cm">// 3. the public nullifierHash matches</span>
+    <span class="kw">component</span> nh = <span class="fn">Poseidon</span>(1);
+    nh.inputs[0] <span class="op">&lt;==</span> nullifier;
+    nh.<span class="ty">out</span> <span class="op">===</span> nullifierHash;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [root, nullifierHash]} = <span class="fn">Withdraw</span>(20);</pre>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 17 §7 SUDOKU DIVIDER                                           -->
+<!-- ============================================================== -->
+<section data-screen-label="17 §7 Sudoku" style="background:var(--ink);color:var(--paper)">
+  <div class="chrome">
+    <div class="top"><span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">§7 · BUILD #4 · ZK SUDOKU</span></span><span style="color:#a8a59c">10 minutes</span></div>
+    <div class="bot"><span style="color:#a8a59c">Prove you have a solution. Don't reveal it.</span><span class="page-no" style="color:#a8a59c">17 / 24</span></div>
+  </div>
+  <div class="slide-pad" style="display:flex;align-items:center;gap:120px">
+    <div style="flex:1">
+      <div class="eyebrow" style="color:#a8a59c">Build four — the most fun one</div>
+      <h2 class="section" style="margin-top:24px;color:var(--paper);font-size:128px">A puzzle<br/>and<br/>a <em style="color:var(--accent);font-style:italic">secret</em>.</h2>
+      <p class="lede" style="color:#cfccc4;margin-top:48px;max-width:720px">
+        Public: the puzzle. Private: a valid completion.
+        Verifier learns only that you have one — never the digits.
+      </p>
+    </div>
+    <!-- visual sudoku -->
+    <div class="sudoku">
+      <!-- row 1 -->
+      <div class="c given">5</div><div class="c given b-r">3</div><div class="c priv">4</div>
+      <div class="c given">6</div><div class="c priv">7</div><div class="c priv b-r">8</div>
+      <div class="c priv">9</div><div class="c given">1</div><div class="c priv">2</div>
+      <!-- row 2 -->
+      <div class="c priv">6</div><div class="c priv b-r">7</div><div class="c priv">2</div>
+      <div class="c given">1</div><div class="c given">9</div><div class="c given b-r">5</div>
+      <div class="c priv">3</div><div class="c priv">4</div><div class="c priv">8</div>
+      <!-- row 3 -->
+      <div class="c priv">1</div><div class="c given b-r b-b">9</div><div class="c given b-b">8</div>
+      <div class="c priv b-b">3</div><div class="c priv b-b">4</div><div class="c priv b-r b-b">2</div>
+      <div class="c priv b-b">5</div><div class="c priv b-b">6</div><div class="c given b-b">7</div>
+      <!-- row 4 -->
+      <div class="c given">8</div><div class="c priv b-r">5</div><div class="c priv">9</div>
+      <div class="c priv">7</div><div class="c given">6</div><div class="c priv b-r">1</div>
+      <div class="c priv">4</div><div class="c given">2</div><div class="c priv">3</div>
+      <!-- row 5 -->
+      <div class="c given">4</div><div class="c priv b-r">2</div><div class="c priv">6</div>
+      <div class="c given">8</div><div class="c priv">5</div><div class="c given b-r">3</div>
+      <div class="c priv">7</div><div class="c priv">9</div><div class="c given">1</div>
+      <!-- row 6 -->
+      <div class="c priv">7</div><div class="c given b-r b-b">1</div><div class="c priv b-b">3</div>
+      <div class="c priv b-b">9</div><div class="c priv b-b">2</div><div class="c given b-r b-b">4</div>
+      <div class="c priv b-b">8</div><div class="c priv b-b">5</div><div class="c given b-b">6</div>
+      <!-- row 7 -->
+      <div class="c priv">9</div><div class="c priv b-r">6</div><div class="c given">1</div>
+      <div class="c priv">5</div><div class="c priv">3</div><div class="c priv b-r">7</div>
+      <div class="c given">2</div><div class="c priv">8</div><div class="c priv">4</div>
+      <!-- row 8 -->
+      <div class="c priv">2</div><div class="c given b-r">8</div><div class="c priv">7</div>
+      <div class="c priv">4</div><div class="c given">1</div><div class="c priv b-r">9</div>
+      <div class="c priv">6</div><div class="c priv">3</div><div class="c given">5</div>
+      <!-- row 9 -->
+      <div class="c priv">3</div><div class="c priv b-r">4</div><div class="c priv">5</div>
+      <div class="c given">2</div><div class="c priv">8</div><div class="c given b-r">6</div>
+      <div class="c priv">1</div><div class="c given">7</div><div class="c priv">9</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 18 SUDOKU CONSTRAINTS THINKING                                 -->
+<!-- ============================================================== -->
+<section data-screen-label="18 Sudoku constraints">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§7 · SUDOKU</span><span>Three rules → three constraints</span></div>
+    <div class="bot"><span>Translating game rules to polynomials</span><span class="page-no">18 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">Before code: write the constraint plan</div>
+    <h1 class="title" style="margin-top:14px;font-size:72px">What does &ldquo;valid&rdquo; mean,<br/>in equations?</h1>
+
+    <div class="three-col" style="margin-top:56px">
+      <div class="frame">
+        <span class="badge" style="color:var(--accent)">RULE 1</span>
+        <h3 class="head" style="margin-top:8px;font-size:38px">Each cell is 1–9</h3>
+        <p class="body" style="margin-top:14px;font-size:22px">For every cell value <em>v</em>:</p>
+        <pre class="code tiny" style="margin-top:12px">(v-1)*(v-2)*(v-3)
+       ...
+*(v-8)*(v-9) === 0;</pre>
+        <p class="small" style="margin-top:12px;color:var(--muted)">A degree-9 product. Use repeated squaring or a Range gadget; circomlib has helpers.</p>
+      </div>
+      <div class="frame">
+        <span class="badge" style="color:var(--accent)">RULE 2</span>
+        <h3 class="head" style="margin-top:8px;font-size:38px">Solution agrees with puzzle</h3>
+        <p class="body" style="margin-top:14px;font-size:22px">For every cell where the puzzle is non-zero:</p>
+        <pre class="code tiny" style="margin-top:12px">puzzle[i][j] * (
+  puzzle[i][j] - sol[i][j]
+) === 0;</pre>
+        <p class="small" style="margin-top:12px;color:var(--muted)">If puzzle = 0, no constraint; otherwise sol must equal puzzle.</p>
+      </div>
+      <div class="frame">
+        <span class="badge" style="color:var(--accent)">RULE 3</span>
+        <h3 class="head" style="margin-top:8px;font-size:38px">Rows / cols / boxes are permutations of 1–9</h3>
+        <p class="body" style="margin-top:14px;font-size:22px">The classic encoding:</p>
+        <pre class="code tiny" style="margin-top:12px"><span class="cm">// every digit d ∈ 1..9</span>
+<span class="cm">// must appear exactly once</span>
+<span class="cm">// in the row.  Use IsEqual</span>
+<span class="cm">// + sum gadgets.</span></pre>
+        <p class="small" style="margin-top:12px;color:var(--muted)">Reuse for cols and 3×3 boxes — same gadget, different indexing.</p>
+      </div>
+    </div>
+
+    <div class="frame ink" style="margin-top:48px;display:flex;justify-content:space-between;align-items:center">
+      <span class="small" style="color:#a8a59c">Public inputs</span>
+      <span style="font-family:var(--mono);font-size:22px;color:var(--paper)">puzzle[9][9] &nbsp;·&nbsp; <span style="color:#a8a59c">private</span>: solution[9][9]</span>
+      <span class="pill solid" style="background:var(--paper);color:var(--ink)">~ 11k constraints</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 19 SUDOKU CODE                                                 -->
+<!-- ============================================================== -->
+<section data-screen-label="19 Sudoku code">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§7 · SUDOKU</span><span>The skeleton</span></div>
+    <div class="bot"><span>Read top-to-bottom — Rule 1, Rule 2, Rule 3</span><span class="page-no">19 / 24</span></div>
+  </div>
+
+  <div class="slide-pad" style="padding-top:80px;padding-bottom:80px">
+    <div class="eyebrow">All three rules in one template</div>
+    <h1 class="title" style="margin-top:10px;font-size:52px">sudoku.circom</h1>
+
+    <div class="two-col" style="margin-top:24px;grid-template-columns:1.3fr 1fr;gap:48px">
+    <pre class="code" style="font-size:16px;line-height:1.45;padding:22px 26px">pragma circom 2.1.6;
+<span class="kw">include</span> <span class="str">"circomlib/circuits/comparators.circom"</span>;
+
+<span class="cm">// Rule 1 — cell is in {1..9}</span>
+<span class="kw">template</span> <span class="fn">InRange1to9</span>() {
+    <span class="kw">signal input</span> v;
+    <span class="kw">signal</span> acc[10];
+    acc[0] <span class="op">&lt;==</span> 1;
+    <span class="kw">for</span> (<span class="kw">var</span> k = 1; k &lt;= 9; k++)
+        acc[k] <span class="op">&lt;==</span> acc[k-1] <span class="op">*</span> (v - k);
+    acc[9] <span class="op">===</span> 0;
+}
+
+<span class="kw">template</span> <span class="fn">Sudoku</span>() {
+    <span class="kw">signal input</span> puzzle[9][9];     <span class="cm">// public</span>
+    <span class="kw">signal input</span> solution[9][9];   <span class="cm">// private</span>
+
+    <span class="kw">component</span> rng[81];
+
+    <span class="cm">// Rules 1 + 2</span>
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; 9; i++) {
+        <span class="kw">for</span> (<span class="kw">var</span> j = 0; j &lt; 9; j++) {
+            rng[i*9+j] = <span class="fn">InRange1to9</span>();
+            rng[i*9+j].v <span class="op">&lt;==</span> solution[i][j];
+            puzzle[i][j] <span class="op">*</span> (puzzle[i][j]
+                - solution[i][j]) <span class="op">===</span> 0;
+        }
+    }
+    <span class="cm">// Rule 3 → Distinct9 over each</span>
+    <span class="cm">// row, col, and 3×3 box.</span>
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [puzzle]} = <span class="fn">Sudoku</span>();</pre>
+
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)">Distinct9 helper</h4>
+<pre class="code" style="font-size:15px;line-height:1.4;padding:18px 22px;margin-top:14px"><span class="cm">// 9 distinct digits ⇒ permutation of {1..9}</span>
+<span class="kw">template</span> <span class="fn">Distinct9</span>() {
+    <span class="kw">signal input</span> a[9];
+    <span class="kw">component</span> eq[36];     <span class="cm">// C(9,2) pairs</span>
+    <span class="kw">var</span> idx = 0;
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; 9; i++)
+      <span class="kw">for</span> (<span class="kw">var</span> j = i+1; j &lt; 9; j++) {
+        eq[idx] = <span class="fn">IsEqual</span>();
+        eq[idx].<span class="ty">in</span>[0] <span class="op">&lt;==</span> a[i];
+        eq[idx].<span class="ty">in</span>[1] <span class="op">&lt;==</span> a[j];
+        eq[idx].<span class="ty">out</span> <span class="op">===</span> 0;
+        idx++;
+      }
+}</pre>
+        <p class="caption" style="margin-top:18px">Wire 27 instances — 9 rows, 9 cols, 9 boxes — to constrain the whole grid.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 20 SECURITY DIVIDER                                            -->
+<!-- ============================================================== -->
+<section data-screen-label="20 §8 Security" style="background:var(--ink);color:var(--paper)">
+  <div class="chrome">
+    <div class="top"><span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">§8 · SECURITY PITFALLS</span></span><span style="color:#a8a59c">7 minutes</span></div>
+    <div class="bot"><span style="color:#a8a59c">After Y. Jeng — &ldquo;security holes when writing circom&rdquo;</span><span class="page-no" style="color:#a8a59c">20 / 24</span></div>
+  </div>
+  <div class="slide-pad" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="eyebrow" style="color:#a8a59c">Section eight — the part that bites you in production</div>
+    <h2 class="section" style="margin-top:24px;color:var(--paper)">A passing proof<br/>can still be<br/><em style="color:var(--danger);font-style:italic">wrong</em>.</h2>
+    <p class="lede" style="color:#cfccc4;margin-top:48px;max-width:1400px">
+      Underconstrained circuits don&rsquo;t crash. They cheerfully verify garbage.
+      Four classes of bug to learn now, before the audit finds them for you.
+    </p>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 21 PITFALL #1 — OVERFLOW / ISZERO                              -->
+<!-- ============================================================== -->
+<section data-screen-label="21 Pitfall overflow">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§8 · SECURITY · 1 of 4</span><span>The field is finite</span></div>
+    <div class="bot"><span>Overflow &amp; the IsZero trap</span><span class="page-no">21 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">Pitfall #1 — finite-field overflow</div>
+    <h1 class="title" style="margin-top:14px;font-size:64px">Everything is <code style="font-family:var(--mono);font-size:0.7em">mod p</code>.</h1>
+
+    <div class="frame ink" style="margin-top:32px;display:flex;align-items:center;justify-content:space-between;gap:32px">
+      <span class="small" style="color:#a8a59c">SNARK_SCALAR_FIELD &nbsp;·&nbsp; bn128</span>
+      <span style="font-family:var(--mono);font-size:18px;color:var(--paper);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:1100px">21888242871839275222246405745257275088548364400416034343698204186575808495617</span>
+      <span class="pill solid" style="background:var(--accent);color:#fff;border-color:var(--accent)">~ 254 bits</span>
+    </div>
+
+    <div class="two-col" style="margin-top:36px;gap:48px">
+      <div class="frame danger">
+        <span class="badge">DANGEROUS</span>
+        <p class="body" style="font-size:22px;margin-top:8px">A user passes <code style="font-family:var(--mono)">in = p</code> (which is <code style="font-family:var(--mono)">≡ 0</code>).</p>
+        <pre class="code tiny" style="margin-top:14px"><span class="cm">// "is this signal zero?"</span>
+<span class="kw">signal input</span> in;
+in <span class="op">===</span> 0;   <span class="danger">// passes when in = p !</span></pre>
+      </div>
+      <div class="frame good">
+        <span class="badge" style="color:var(--good)">SAFE</span>
+        <p class="body" style="font-size:22px;margin-top:8px">Use circomlib&rsquo;s <code style="font-family:var(--mono)">IsZero</code> — it cannot be fooled.</p>
+        <pre class="code tiny" style="margin-top:14px"><span class="kw">component</span> iz = <span class="fn">IsZero</span>();
+iz.<span class="ty">in</span>  <span class="op">&lt;==</span> in;
+iz.<span class="ty">out</span> <span class="op">===</span> 1;   <span class="good">// out = 1 ⇔ in = 0</span></pre>
+      </div>
+    </div>
+
+    <div class="frame" style="margin-top:32px;background:var(--paper-2);display:flex;gap:32px;align-items:center">
+      <span class="badge" style="color:var(--ink)">FOLLOW-ON</span>
+      <p class="body" style="margin:0;font-size:22px">The same trap hits <code style="font-family:var(--mono)">a + b</code>, <code style="font-family:var(--mono)">a * b</code>, range-proofs — anything where you assumed integers behave like integers. They&rsquo;re field elements.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 22 PITFALL #2 — Num2Bits & LessThan                            -->
+<!-- ============================================================== -->
+<section data-screen-label="22 Pitfall bits">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§8 · SECURITY · 2 of 4</span><span>LessThan(n) trusts you too much</span></div>
+    <div class="bot"><span>Always range-check inputs first</span><span class="page-no">22 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">Pitfall #2 — comparators don&rsquo;t check input width</div>
+    <h1 class="title" style="margin-top:14px;font-size:64px">Bound it, then compare it.</h1>
+
+    <div class="two-col" style="margin-top:36px;gap:48px">
+      <div class="frame danger">
+        <span class="badge">DANGEROUS</span>
+        <p class="body" style="font-size:22px;margin-top:8px">You think you&rsquo;re comparing two uint64s. The prover passes 200-bit values. <code style="font-family:var(--mono)">LessThan(64)</code> happily lies.</p>
+        <pre class="code tiny" style="margin-top:14px"><span class="kw">signal</span> num[2];
+<span class="kw">component</span> lt = <span class="fn">LessThan</span>(64);
+lt.<span class="ty">in</span>[0] <span class="op">&lt;==</span> num[0];   <span class="danger">// could be huge</span>
+lt.<span class="ty">in</span>[1] <span class="op">&lt;==</span> num[1];   <span class="danger">// could be huge</span>
+lt.<span class="ty">out</span> <span class="op">===</span> 1;</pre>
+      </div>
+      <div class="frame good">
+        <span class="badge" style="color:var(--good)">SAFE</span>
+        <p class="body" style="font-size:22px;margin-top:8px">Force inputs into the bit range with <code style="font-family:var(--mono)">Num2Bits(n)</code> first — its internal sum-check will reject overflow.</p>
+        <pre class="code tiny" style="margin-top:14px"><span class="kw">component</span> n2b[2];
+<span class="kw">component</span> lt = <span class="fn">LessThan</span>(64);
+<span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; 2; i++) {
+    n2b[i] = <span class="fn">Num2Bits</span>(64);   <span class="good">// range-check</span>
+    n2b[i].<span class="ty">in</span> <span class="op">&lt;==</span> num[i];
+    lt.<span class="ty">in</span>[i] <span class="op">&lt;==</span> num[i];
+}
+lt.<span class="ty">out</span> <span class="op">===</span> 1;</pre>
+      </div>
+    </div>
+
+    <div class="three-col" style="margin-top:36px;gap:32px">
+      <div class="frame">
+        <h4 style="font-family:var(--mono);font-size:16px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin:0">+1 bit for arithmetic</h4>
+        <p class="body" style="margin-top:10px;font-size:20px">If you compute <code style="font-family:var(--mono)">a + b</code> from <em>n</em>-bit values, the result needs <em>n+1</em> bits. Dark Forest v0.3 was bitten by exactly this.</p>
+      </div>
+      <div class="frame">
+        <h4 style="font-family:var(--mono);font-size:16px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin:0">Num2Bits(254) is wrong</h4>
+        <p class="body" style="margin-top:10px;font-size:20px">It accepts values <em>above</em> p. Use <code style="font-family:var(--mono)">Num2Bits_strict()</code> when you specifically need a no-overflow range check.</p>
+      </div>
+      <div class="frame">
+        <h4 style="font-family:var(--mono);font-size:16px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin:0">LessThan(n) caps n ≤ 252</h4>
+        <p class="body" style="margin-top:10px;font-size:20px">There&rsquo;s an <code style="font-family:var(--mono)">assert(n &lt;= 252)</code> inside. Catches mistakes at compile time — write your own asserts liberally.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 23 PITFALL #3 — UNDERCONSTRAINED PUBLIC SIGNALS                -->
+<!-- ============================================================== -->
+<section data-screen-label="23 Pitfall under-constrained">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>§8 · SECURITY · 3 + 4 of 4</span><span>Underconstrained circuits</span></div>
+    <div class="bot"><span>The bug that ate Tornado Cash&rsquo;s safety story</span><span class="page-no">23 / 24</span></div>
+  </div>
+
+  <div class="slide-pad">
+    <div class="eyebrow">Pitfall #3 — public signals that don&rsquo;t do anything</div>
+    <h1 class="title" style="margin-top:14px;font-size:60px">If a public signal has<br/>no constraints, it&rsquo;s <em style="color:var(--danger);font-style:italic">malleable</em>.</h1>
+
+    <div class="two-col" style="margin-top:32px;gap:48px">
+      <div>
+        <p class="body" style="font-size:22px">Tornado Cash takes <code style="font-family:var(--mono)">recipient</code>, <code style="font-family:var(--mono)">relayer</code>, <code style="font-family:var(--mono)">fee</code>, <code style="font-family:var(--mono)">refund</code> as public inputs &mdash; but the circuit doesn&rsquo;t use them in any computation. A miner could swap the recipient without invalidating the proof.</p>
+        <p class="body" style="font-size:22px;margin-top:14px">The fix is a one-liner per signal: <strong>square it</strong>. The optimizer can&rsquo;t drop the constraint, and any change to the input invalidates the proof.</p>
+
+        <div class="frame ink" style="margin-top:24px">
+          <span class="badge" style="color:var(--accent)">PITFALL #4 · template assertions</span>
+          <p class="body" style="margin:8px 0 0;color:var(--paper);font-size:20px">Add <code style="font-family:var(--mono)">assert(SUM_FIELDS &lt;= TOTAL_FIELDS)</code> to your template parameters. <code style="font-family:var(--mono)">assert</code> fires <em>at compile time</em> — it catches misconfiguration before deploy, costs zero constraints.</p>
+        </div>
+      </div>
+
+      <pre class="code small"><span class="cm">// from tornado-core/circuits/withdraw.circom</span>
+
+<span class="kw">signal input</span> recipient; <span class="cm">// not used in any compute</span>
+<span class="kw">signal input</span> relayer;
+<span class="kw">signal input</span> fee;
+<span class="kw">signal input</span> refund;
+
+<span class="cm">// Bind them with a quadratic constraint each.</span>
+<span class="cm">// Squares prevent the optimizer from</span>
+<span class="cm">// removing them. 4 constraints total.</span>
+<span class="kw">signal</span> recipientSquare;
+<span class="kw">signal</span> feeSquare;
+<span class="kw">signal</span> relayerSquare;
+<span class="kw">signal</span> refundSquare;
+
+recipientSquare <span class="op">&lt;==</span> recipient <span class="op">*</span> recipient;
+feeSquare       <span class="op">&lt;==</span> fee       <span class="op">*</span> fee;
+relayerSquare   <span class="op">&lt;==</span> relayer   <span class="op">*</span> relayer;
+refundSquare    <span class="op">&lt;==</span> refund    <span class="op">*</span> refund;</pre>
+    </div>
+
+    <div class="frame" style="margin-top:32px;background:var(--paper-2);display:flex;justify-content:space-between;align-items:center">
+      <span class="badge" style="color:var(--ink)">DEFENCES — the cheap, real ones</span>
+      <span class="body" style="font-size:22px;margin:0">① import audited templates &nbsp;·&nbsp; ② write tests that try to cheat &nbsp;·&nbsp; ③ pay for an audit before mainnet</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- 24 HOMEWORK / WRAP                                             -->
+<!-- ============================================================== -->
+<section data-screen-label="24 Homework">
+  <div class="chrome">
+    <div class="top"><span class="mark"><span class="dot"></span>WRAP · HOMEWORK</span><span>Until next time</span></div>
+    <div class="bot"><span>Tornado Cash, all the way down</span><span class="page-no">24 / 24</span></div>
+  </div>
+
+  <div class="slide-pad" style="display:flex;flex-direction:column;justify-content:space-between">
+    <div>
+      <div class="eyebrow">Homework</div>
+      <h1 class="display" style="margin-top:18px;font-size:148px">
+        Read<br/>
+        <em style="font-style:italic;color:var(--accent)">Tornado&nbsp;Cash</em>.
+      </h1>
+      <p class="lede" style="margin-top:36px;max-width:1300px">
+        You already have all the parts. Open <code style="font-family:var(--mono)">withdraw.circom</code>
+        and trace it line-by-line — it&rsquo;s a Merkle membership proof + a mixed-secret leaf + the four
+        bound public signals from slide&nbsp;23. That&rsquo;s the whole mixer.
+      </p>
+    </div>
+
+    <div class="two-col" style="grid-template-columns:1.3fr 1fr;gap:64px;align-items:end">
+      <div>
+        <h4 style="font-family:var(--mono);font-size:18px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin:0">Suggested order</h4>
+        <ol style="font-family:var(--sans);font-size:24px;line-height:1.55;color:var(--ink-2);padding-left:24px;margin-top:14px">
+          <li>Read <code style="font-family:var(--mono)">tornado-core/circuits/withdraw.circom</code> end-to-end.</li>
+          <li>Identify: which signals are public? which are private? which are nullifiers?</li>
+          <li>Find the <code style="font-family:var(--mono)">*Square</code> constraints from today&rsquo;s slide. Why are they there?</li>
+          <li>Bonus: implement a 1-out-of-2 deposit (two distinct denominations) by parameterizing the template.</li>
+        </ol>
+      </div>
+      <div class="frame ink">
+        <h4 style="font-family:var(--mono);font-size:16px;letter-spacing:0.16em;text-transform:uppercase;color:#a8a59c;margin:0">Further reading</h4>
+        <ul class="dash" style="margin-top:14px">
+          <li style="color:#cfccc4">iden3/circom &nbsp;·&nbsp; iden3/circomlib</li>
+          <li style="color:#cfccc4">0xPARC/zk-bug-tracker</li>
+          <li style="color:#cfccc4">Y. Jeng &mdash; &ldquo;security holes when writing circom&rdquo;</li>
+          <li style="color:#cfccc4">tornado-core / withdraw.circom</li>
+        </ul>
+        <div class="rule" style="background:#2a2f37;margin:24px 0"></div>
+        <span class="small" style="color:#a8a59c">Questions? Stay 5 minutes — we&rsquo;ll debug your install live.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</deck-stage>
+
+</body>
+</html>

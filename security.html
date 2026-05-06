@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Security — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="security" class="dark">
+  <div class="wrap">
+    <span class="section-no" style="color:#a8a59c">§7 · Security pitfalls</span>
+    <h2 style="margin-top:14px;color:var(--paper)">A passing proof can still be <em style="color:var(--danger)">wrong</em>.</h2>
+    <p class="lede" style="color:#cfccc4">
+      Underconstrained circuits don&rsquo;t crash. They cheerfully verify garbage.
+      Four classes of bug to learn now, before the audit finds them for you.
+      <span class="muted" style="display:block;margin-top:8px;font-size:14px">After Y. Jeng — &ldquo;security holes when writing circom&rdquo;</span>
+    </p>
+
+    <!-- pitfall 1 -->
+    <h3 style="margin-top:64px;color:var(--paper)">1 · Everything is <code class="inline">mod p</code></h3>
+    <div class="frame" style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+      <span class="small">SNARK_SCALAR_FIELD · bn128</span>
+      <span style="font-family:var(--mono);font-size:13px;color:var(--paper);overflow-wrap:anywhere">21888242871839275222246405745257275088548364400416034343698204186575808495617</span>
+      <span class="pill accent">~ 254 bits</span>
+    </div>
+    <div class="grid-2" style="margin-top:18px">
+      <div class="frame danger">
+        <span class="badge" style="color:var(--danger)">DANGEROUS</span>
+        <p style="margin-top:8px">A user passes <code class="inline">in = p</code> (which is <code class="inline">≡ 0</code>):</p>
+        <pre class="code" style="margin-top:10px"><span class="kw">signal input</span> in;
+in <span class="op">===</span> 0;   <span class="danger">// passes when in = p !</span></pre>
+      </div>
+      <div class="frame good">
+        <span class="badge" style="color:var(--good)">SAFE</span>
+        <p style="margin-top:8px">Use circomlib's <code class="inline">IsZero</code> — it cannot be fooled.</p>
+        <pre class="code" style="margin-top:10px"><span class="kw">component</span> iz = <span class="fn">IsZero</span>();
+iz.<span class="ty">in</span>  <span class="op">&lt;==</span> in;
+iz.<span class="ty">out</span> <span class="op">===</span> 1;   <span class="good">// out = 1 ⇔ in = 0</span></pre>
+      </div>
+    </div>
+
+    <!-- pitfall 2 -->
+    <h3 style="margin-top:64px;color:var(--paper)">2 · LessThan(n) trusts you too much</h3>
+    <div class="grid-2" style="margin-top:14px">
+      <div class="frame danger">
+        <span class="badge" style="color:var(--danger)">DANGEROUS</span>
+        <p style="margin-top:8px">You think you're comparing two uint64s. The prover passes 200-bit values. <code class="inline">LessThan(64)</code> happily lies.</p>
+        <pre class="code" style="margin-top:10px"><span class="kw">signal</span> num[2];
+<span class="kw">component</span> lt = <span class="fn">LessThan</span>(64);
+lt.<span class="ty">in</span>[0] <span class="op">&lt;==</span> num[0];   <span class="danger">// could be huge</span>
+lt.<span class="ty">in</span>[1] <span class="op">&lt;==</span> num[1];
+lt.<span class="ty">out</span> <span class="op">===</span> 1;</pre>
+      </div>
+      <div class="frame good">
+        <span class="badge" style="color:var(--good)">SAFE</span>
+        <p style="margin-top:8px">Force inputs into the bit range with <code class="inline">Num2Bits(n)</code> first.</p>
+        <pre class="code" style="margin-top:10px"><span class="kw">component</span> n2b[2];
+<span class="kw">component</span> lt = <span class="fn">LessThan</span>(64);
+<span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; 2; i++) {
+    n2b[i] = <span class="fn">Num2Bits</span>(64);   <span class="good">// range-check</span>
+    n2b[i].<span class="ty">in</span> <span class="op">&lt;==</span> num[i];
+    lt.<span class="ty">in</span>[i] <span class="op">&lt;==</span> num[i];
+}
+lt.<span class="ty">out</span> <span class="op">===</span> 1;</pre>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:24px">
+      <div class="frame">
+        <h4>+1 bit for arithmetic</h4>
+        <p>If you compute <code class="inline">a + b</code> from <em>n</em>-bit values, the result needs <em>n+1</em> bits. Dark Forest v0.3 was bitten by exactly this.</p>
+      </div>
+      <div class="frame">
+        <h4>Num2Bits(254) is wrong</h4>
+        <p>It accepts values <em>above</em> p. Use <code class="inline">Num2Bits_strict()</code> when you need a no-overflow range check.</p>
+      </div>
+      <div class="frame">
+        <h4>LessThan(n) caps n ≤ 252</h4>
+        <p>There's an <code class="inline">assert(n &lt;= 252)</code> inside. Catches mistakes at compile time — write your own asserts liberally.</p>
+      </div>
+    </div>
+
+    <!-- pitfall 3 -->
+    <h3 style="margin-top:64px;color:var(--paper)">3 · Underconstrained public signals</h3>
+    <p>If a public signal has no constraints, it's <em style="color:var(--danger)">malleable</em>.</p>
+    <div class="grid-2" style="margin-top:18px">
+      <div>
+        <p>Tornado Cash takes <code class="inline">recipient</code>, <code class="inline">relayer</code>, <code class="inline">fee</code>, <code class="inline">refund</code> as public inputs — but the circuit doesn't use them in any computation. A miner could swap the recipient without invalidating the proof.</p>
+        <p>The fix is a one-liner per signal: <strong>square it</strong>. The optimizer can't drop the constraint, and any change to the input invalidates the proof.</p>
+      </div>
+      <pre class="code"><span class="cm">// from tornado-core/circuits/withdraw.circom</span>
+
+<span class="kw">signal input</span> recipient;
+<span class="kw">signal input</span> relayer;
+<span class="kw">signal input</span> fee;
+<span class="kw">signal input</span> refund;
+
+<span class="cm">// Bind them with a quadratic constraint each.</span>
+<span class="cm">// Squares prevent the optimizer from</span>
+<span class="cm">// removing them. 4 constraints total.</span>
+<span class="kw">signal</span> recipientSquare;
+<span class="kw">signal</span> feeSquare;
+<span class="kw">signal</span> relayerSquare;
+<span class="kw">signal</span> refundSquare;
+
+recipientSquare <span class="op">&lt;==</span> recipient <span class="op">*</span> recipient;
+feeSquare       <span class="op">&lt;==</span> fee       <span class="op">*</span> fee;
+relayerSquare   <span class="op">&lt;==</span> relayer   <span class="op">*</span> relayer;
+refundSquare    <span class="op">&lt;==</span> refund    <span class="op">*</span> refund;</pre>
+    </div>
+
+    <!-- pitfall 4 -->
+    <h3 style="margin-top:64px;color:var(--paper)">4 · Use template assertions</h3>
+    <p>Add <code class="inline">assert(SUM_FIELDS &lt;= TOTAL_FIELDS)</code> to your template parameters. <code class="inline">assert</code> fires <em>at compile time</em> — it catches misconfiguration before deploy, costs zero constraints.</p>
+
+    <div class="frame" style="margin-top:32px;background:rgba(255,255,255,0.04);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <span class="badge" style="color:var(--paper)">DEFENCES — the cheap, real ones</span>
+      <span style="font-family:var(--mono);font-size:13px;color:#cfccc4">① import audited templates &nbsp;·&nbsp; ② write tests that try to cheat &nbsp;·&nbsp; ③ pay for an audit before mainnet</span>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./mixer.html">← Mixer</a>
+    <a href="./homework.html">Homework →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

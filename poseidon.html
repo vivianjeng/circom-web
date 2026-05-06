@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Poseidon — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="poseidon" class="dark">
+  <div class="wrap">
+    <span class="section-no" style="color:#a8a59c">§4 · Build #1</span>
+    <h2 style="margin-top:14px;color:var(--paper)">Poseidon.<br/><em>SNARK-friendly</em> by design.</h2>
+    <p class="lede" style="color:#cfccc4">
+      Keccak inside a SNARK costs ~150k constraints. Poseidon does the same job in ~200.
+      That&rsquo;s why every Circom project ends up using it.
+    </p>
+
+    <div class="grid-2" style="margin-top:48px;grid-template-columns:1.2fr 1fr">
+      <pre class="code"><span class="cm">// hash2.circom</span>
+pragma circom 2.1.6;
+
+<span class="kw">include</span> <span class="str">"circomlib/circuits/poseidon.circom"</span>;
+
+<span class="kw">template</span> <span class="fn">Hash2</span>() {
+    <span class="kw">signal input</span>  left;
+    <span class="kw">signal input</span>  right;
+    <span class="kw">signal output</span> out;
+
+    <span class="kw">component</span> h = <span class="fn">Poseidon</span>(2);
+    h.inputs[0] <span class="op">&lt;==</span> left;
+    h.inputs[1] <span class="op">&lt;==</span> right;
+    out <span class="op">&lt;==</span> h.<span class="ty">out</span>;
+}
+
+<span class="kw">component main</span> = <span class="fn">Hash2</span>();
+
+<span class="cm">/* INPUT = { "left": "7", "right": "42" } */</span></pre>
+      <div>
+        <h4>What we just did</h4>
+        <ul class="dash">
+          <li><strong>Poseidon(n)</strong> — a parameterized template; <code class="inline">n</code> is the arity.</li>
+          <li>Components are wired by assigning their input signals with <code class="inline">&lt;==</code>.</li>
+          <li>Output is read off <code class="inline">h.out</code>.</li>
+          <li>This is the brick we&rsquo;ll stack into a Merkle tree next.</li>
+        </ul>
+        <div class="frame" style="margin-top:24px;background:rgba(255,255,255,0.04)">
+          <dl class="kv">
+            <dt>constraints</dt><dd>≈ 213</dd>
+            <dt>prove time</dt><dd>~ 50 ms</dd>
+            <dt>output</dt><dd style="color:var(--accent)">a single field element</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./zkrepl.html">← zkREPL</a>
+    <a href="./merkle.html">Merkle →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

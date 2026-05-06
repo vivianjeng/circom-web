@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>zkREPL — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="zkrepl">
+  <div class="wrap">
+    <span class="section-no">§3 · zkrepl.dev</span>
+    <h2 style="margin-top:14px">All seven commands → one button.</h2>
+    <p class="lede">Meet <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev</a> — compile and prove in your browser, no toolchain required.</p>
+
+    <div class="grid-2" style="margin-top:32px;grid-template-columns:1.2fr 1fr">
+      <div style="border-radius:8px;overflow:hidden;border:1px solid var(--ink);background:#0f1216">
+        <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#0a0d11;border-bottom:1px solid #1a1f25">
+          <span style="width:10px;height:10px;background:#ff5f57;border-radius:50%"></span>
+          <span style="width:10px;height:10px;background:#febc2e;border-radius:50%"></span>
+          <span style="width:10px;height:10px;background:#28c840;border-radius:50%"></span>
+          <span style="margin-left:14px;font-family:var(--mono);font-size:12px;color:#7a8088">zkrepl.dev — multiplier.circom</span>
+        </div>
+        <pre class="code" style="border-radius:0;border:none;margin:0">pragma circom 2.1.6;
+
+<span class="kw">template</span> <span class="fn">Multiplier</span>() {
+    <span class="kw">signal input</span>  a;
+    <span class="kw">signal input</span>  b;
+    <span class="kw">signal output</span> c;
+    c <span class="op">&lt;==</span> a <span class="op">*</span> b;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [a]} = <span class="fn">Multiplier</span>();
+
+<span class="cm">/* INPUT = { "a": "3", "b": "11" } */</span>
+
+<span class="good">✓ compiled · 1 constraint
+✓ witness ok · c = 33
+✓ groth16 proof generated in 142ms</span></pre>
+      </div>
+      <div>
+        <h4>Why we use it for teaching</h4>
+        <ul class="dash">
+          <li>Compiles &amp; proves in your browser — no toolchain.</li>
+          <li>Inputs live in a comment — share circuits as a single file.</li>
+          <li>Built-in <code class="inline">circomlib</code> — <code class="inline">include "circomlib/poseidon.circom";</code> just works.</li>
+          <li>Constraint count printed live — feel the cost of your code.</li>
+        </ul>
+        <div class="frame danger" style="margin-top:24px">
+          <span class="badge" style="color:var(--danger)">CAVEAT</span>
+          <p style="margin-top:8px">zkREPL silently does <code class="inline">input % p</code> on every input, so it <strong>cannot reproduce overflow bugs</strong>. Real snarkjs will. Don&rsquo;t skip the local toolchain forever.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./pipeline.html">← Pipeline</a>
+    <a href="./poseidon.html">Poseidon →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

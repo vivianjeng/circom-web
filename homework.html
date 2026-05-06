@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Homework — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="homework">
+  <div class="wrap">
+    <span class="section-no">Homework</span>
+    <h2 style="margin-top:14px">Read <em>Tornado Cash</em>.</h2>
+    <p class="lede">
+      You already have all the parts. Open <code class="inline">withdraw.circom</code>
+      and trace it line-by-line — it&rsquo;s a Merkle membership proof + a mixed-secret leaf + the four
+      bound public signals from §7.3. That&rsquo;s the whole mixer.
+    </p>
+
+    <div class="grid-2" style="margin-top:48px;grid-template-columns:1.3fr 1fr">
+      <div>
+        <h4>Suggested order</h4>
+        <ol style="font-size:18px;line-height:1.55;color:var(--ink-2);padding-left:20px">
+          <li>Read <code class="inline">tornado-core/circuits/withdraw.circom</code> end-to-end.</li>
+          <li>Identify: which signals are public? which are private? which are nullifiers?</li>
+          <li>Find the <code class="inline">*Square</code> constraints from §7.3. Why are they there?</li>
+          <li>Bonus: implement a 1-out-of-2 deposit (two distinct denominations) by parameterizing the template.</li>
+        </ol>
+      </div>
+      <div class="frame ink">
+        <h4 style="color:#a8a59c">Further reading</h4>
+        <ul class="dash" style="margin-top:8px">
+          <li><a href="https://github.com/iden3/circom" target="_blank" rel="noopener">iden3/circom</a> · <a href="https://github.com/iden3/circomlib" target="_blank" rel="noopener">iden3/circomlib</a></li>
+          <li><a href="https://github.com/0xPARC/zk-bug-tracker" target="_blank" rel="noopener">0xPARC/zk-bug-tracker</a></li>
+          <li><a href="https://medium.com/@vivi43222/%E6%92%B0%E5%AF%AB-circom-%E6%99%82%E8%A6%81%E6%B3%A8%E6%84%8F%E7%9A%84%E5%AE%89%E5%85%A8%E6%BC%8F%E6%B4%9E-45718d903d19" target="_blank" rel="noopener">Y. Jeng — security holes when writing circom</a></li>
+          <li><a href="https://github.com/tornadocash/tornado-core" target="_blank" rel="noopener">tornado-core / withdraw.circom</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./security.html">← Security</a>
+    <a href="./index.html">↑ Home</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

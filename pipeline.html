@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pipeline — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="pipeline" class="dark">
+  <div class="wrap">
+    <span class="section-no" style="color:#a8a59c">§2 · The compile pipeline</span>
+    <h2 style="margin-top:14px;color:var(--paper)">What actually happens<br/>when you <em>circom</em>.</h2>
+    <p class="lede" style="color:#cfccc4">5 stages, 2 actors. The prover holds secrets and runs heavy compute. The verifier sees only the proof + the public inputs.</p>
+
+    <div class="pipeline">
+      <div class="step"><span class="n">01 — Author</span><span class="t">Write circuit</span><span class="d">circuit.circom<br/><span class="muted">templates &amp; signals</span></span></div>
+      <div class="step"><span class="n">02 — circom</span><span class="t">Compile</span><span class="d">.r1cs · .wasm · .sym<br/><span class="muted">circom circuit.circom --r1cs --wasm</span></span></div>
+      <div class="step ink"><span class="n">03 — snarkjs</span><span class="t">Trusted setup</span><span class="d">ptau + r1cs → .zkey<br/>vkey.json</span></div>
+      <div class="step"><span class="n">04 — Prover</span><span class="t">Witness + proof</span><span class="d">inputs.json → witness.wtns<br/>→ proof.json + public.json</span></div>
+      <div class="step"><span class="n">05 — Verifier</span><span class="t">Verify</span><span class="d">vkey + proof + public<br/><span class="muted">snarkjs / Solidity contract</span></span></div>
+    </div>
+
+    <div class="grid-2" style="margin-top:48px">
+      <div class="frame">
+        <span class="badge" style="color:var(--accent)">PROVER · runs locally, holds secrets</span>
+        <p style="margin-top:10px">Has private inputs (the witness). Runs the .wasm to compute every signal, then uses the .zkey to produce a proof. <strong>Heavy compute, runs once per claim.</strong></p>
+      </div>
+      <div class="frame">
+        <span class="badge" style="color:var(--paper)">VERIFIER · runs anywhere, public</span>
+        <p style="margin-top:10px">Has only the verification key + the public inputs + the proof. Outputs <code class="inline">true</code> or <code class="inline">false</code>. <strong>Cheap, succinct — milliseconds, kilobytes.</strong></p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:64px;color:var(--paper)">The seven commands that ship a proof</h3>
+    <p class="muted">Bookmark this — it&rsquo;s the entire workflow.</p>
+    <pre class="code" style="margin-top:18px"><span class="cm"># 1. compile circuit → r1cs + wasm</span>
+circom circuit.circom --r1cs --wasm --sym
+
+<span class="cm"># 2. setup phase 2 (uses ptau from pre-flight)</span>
+snarkjs groth16 setup circuit.r1cs powersOfTau28_hez_final_14.ptau circuit_0000.zkey
+
+<span class="cm"># 3. contribute entropy (each prover adds randomness)</span>
+snarkjs zkey contribute circuit_0000.zkey circuit_final.zkey --name="me" -v
+
+<span class="cm"># 4. export the verification key (public, tiny, reused forever)</span>
+snarkjs zkey export verificationkey circuit_final.zkey verification_key.json
+
+<span class="cm"># 5. compute witness from your private inputs</span>
+node circuit_js/generate_witness.js circuit_js/circuit.wasm input.json witness.wtns
+
+<span class="cm"># 6. produce the proof</span>
+snarkjs groth16 prove circuit_final.zkey witness.wtns proof.json public.json
+
+<span class="cm"># 7. verify (anyone can do this — no secrets needed)</span>
+snarkjs groth16 verify verification_key.json public.json proof.json
+<span class="good"># [INFO]  snarkJS: OK!</span></pre>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./syntax.html">← Syntax</a>
+    <a href="./zkrepl.html">zkREPL →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

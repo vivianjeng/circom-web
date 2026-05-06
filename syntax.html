@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Syntax — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="syntax" class="dark">
+  <div class="wrap">
+    <span class="section-no" style="color:#a8a59c">§1 · Circom syntax</span>
+    <h2 style="margin-top:14px;color:var(--paper)">A circuit is<br/>a system of <em>constraints</em>.</h2>
+    <p class="lede" style="color:#cfccc4;max-width:820px">
+      Not a program. Not a function. A set of polynomial equations
+      that some witness must satisfy. Circom is just a nicer way to write them down.
+    </p>
+
+    <h3 style="margin-top:64px;color:var(--paper)">The three operators that trip everyone up</h3>
+    <p style="font-family:var(--mono);font-size:32px;margin:8px 0 32px"><code class="inline" style="font-size:0.95em;background:transparent;color:var(--paper);padding:0"><span>&lt;--</span><span style="color:#4a4f57;margin:0 20px">·</span><span>===</span><span style="color:#4a4f57;margin:0 20px">·</span><span>&lt;==</span></code></p>
+
+    <div class="grid-3">
+      <div class="frame">
+        <span class="badge muted">ASSIGN ONLY</span>
+        <h3 style="font-family:var(--mono);font-size:36px;color:var(--paper);margin-top:6px">&lt;--</h3>
+        <p style="margin-top:10px">Computes a value for a signal. <strong>No constraint</strong> is added. Witness-only helpers.</p>
+        <pre class="code" style="margin-top:14px;font-size:13px">out &lt;-- in / 7;</pre>
+        <p class="small" style="margin-top:10px;color:#ff9a8a">⚠ Dangerous on its own — the prover can lie.</p>
+      </div>
+      <div class="frame">
+        <span class="badge muted">CONSTRAIN ONLY</span>
+        <h3 style="font-family:var(--mono);font-size:36px;color:var(--paper);margin-top:6px">===</h3>
+        <p style="margin-top:10px">Adds a constraint. Both sides must be equal in <em>every</em> valid witness.</p>
+        <pre class="code" style="margin-top:14px;font-size:13px">out * 7 === in;</pre>
+        <p class="small" style="margin-top:10px">Pure equation — no assignment.</p>
+      </div>
+      <div class="frame" style="border-color:var(--accent);background:rgba(58,135,188,0.1)">
+        <span class="badge" style="color:var(--accent)">ASSIGN + CONSTRAIN</span>
+        <h3 style="font-family:var(--mono);font-size:36px;color:var(--paper);margin-top:6px">&lt;==</h3>
+        <p style="margin-top:10px">The one you want 95% of the time. Computes <em>and</em> constrains in one stroke.</p>
+        <pre class="code" style="margin-top:14px;font-size:13px">c &lt;== a * b;</pre>
+        <p class="small" style="margin-top:10px;color:#9be0a8">✓ Default choice. Reach for this first.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:32px;font-family:var(--mono);font-size:15px;color:#cfccc4">
+      Rule of thumb · if the prover could cheat by assigning a wrong value, you used <span style="color:#ff9a8a">&lt;--</span> when you should have used <span style="color:var(--accent)">&lt;==</span>.
+    </p>
+  </div>
+</section>
+
+<section id="hello">
+  <div class="wrap">
+    <span class="section-no">§1.1 · A first template</span>
+    <h2 style="margin-top:14px">Hello, Multiplier.</h2>
+    <p class="lede">A template is the unit of reuse — like a class. <code class="inline">main</code> is the entry point.</p>
+
+    <div class="grid-2" style="margin-top:32px;grid-template-columns:1.1fr 1fr">
+      <pre class="code">pragma circom 2.1.6;
+
+<span class="kw">template</span> <span class="fn">Multiplier</span>() {
+    <span class="kw">signal input</span>  a;
+    <span class="kw">signal input</span>  b;
+    <span class="kw">signal output</span> c;
+
+    c <span class="op">&lt;==</span> a <span class="op">*</span> b;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [a]} = <span class="fn">Multiplier</span>();</pre>
+      <div>
+        <h4>What to notice</h4>
+        <ul class="dash">
+          <li><strong>signal</strong> — an unknown in the system; can be <em>input</em>, <em>output</em>, or intermediate.</li>
+          <li><strong>template</strong> — parameterized circuit; instantiated with <code class="inline">component</code>.</li>
+          <li><strong>main</strong> — exactly one entry point per circuit.</li>
+          <li><strong>public&nbsp;[a]</strong> — which inputs the verifier sees. Everything else is private.</li>
+          <li>One <code class="inline">&lt;==</code> here = one R1CS constraint after compile.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin-top:64px">Every constraint must fit one shape</h3>
+    <p style="font-family:var(--mono);font-size:36px;margin:14px 0 24px;letter-spacing:-0.01em">
+      (A·s) <span style="color:var(--accent)">×</span> (B·s) <span style="color:var(--accent)">=</span> (C·s)
+    </p>
+    <p class="lede"><strong>R1CS</strong> = Rank-1 Constraint System. <em>s</em> is the witness vector; <em>A, B, C</em> are sparse coefficient vectors. Each constraint is the product of two linear combinations.</p>
+
+    <div class="grid-3" style="margin-top:32px">
+      <div class="frame"><span class="badge muted">LEGAL</span>
+        <pre class="code" style="margin-top:10px">c &lt;== a * b;
+y &lt;== 3*x + 5;
+z &lt;== (a+b)*(c+d);</pre></div>
+      <div class="frame" style="border-color:var(--danger)"><span class="badge" style="color:var(--danger)">ILLEGAL</span>
+        <pre class="code" style="margin-top:10px">y &lt;== a * b * c;  <span class="cm">// deg 3</span>
+y &lt;== a / b;      <span class="cm">// not quad.</span></pre></div>
+      <div class="frame"><span class="badge muted">FIX</span>
+        <pre class="code" style="margin-top:10px">signal ab;
+ab &lt;== a * b;
+y  &lt;== ab * c;</pre></div>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./preflight.html">← Pre-flight</a>
+    <a href="./pipeline.html">Pipeline →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

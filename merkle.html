@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Merkle — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="merkle">
+  <div class="wrap">
+    <span class="section-no">§5 · Build #2 · Merkle membership</span>
+    <h2 style="margin-top:14px">Merkle membership.</h2>
+    <p class="lede">Prove "I'm in the set" without saying who you are.</p>
+
+    <div class="grid-2" style="margin-top:48px;align-items:center">
+      <div class="tree">
+        <div class="row"><span class="node target">root</span></div>
+        <div class="row" style="gap:80px"><span class="node">h₂</span><span class="node path">h₃</span></div>
+        <div class="row" style="gap:32px"><span class="node">h₀</span><span class="node">h₁</span><span class="node path">h₄</span><span class="node">h₅</span></div>
+        <div class="row" style="gap:8px">
+          <span class="node leaf">a</span><span class="node leaf">b</span>
+          <span class="node leaf">c</span><span class="node leaf">d</span>
+          <span class="node target">★</span><span class="node leaf">f</span>
+          <span class="node leaf">g</span><span class="node leaf">h</span>
+        </div>
+        <p class="small" style="text-align:center;margin-top:14px;max-width:480px">Public: the root. Private: the leaf <strong style="color:var(--accent)">★</strong>, plus the sibling on each level (filled) and which side it sat on.</p>
+      </div>
+      <div>
+        <h4>The claim</h4>
+        <p class="lede">&ldquo;I know a leaf in the tree with this root, but I won&rsquo;t tell you which one.&rdquo;</p>
+        <h4 style="margin-top:32px">The recipe</h4>
+        <ol style="font-size:17px;line-height:1.55;color:var(--ink-2);padding-left:20px;margin:8px 0 0">
+          <li>Start with the leaf as your <em>cursor</em>.</li>
+          <li>For each level, hash <em>cursor</em> with that level&rsquo;s sibling.</li>
+          <li>The <em>side</em> bit decides ordering: <code class="inline">left/right</code>.</li>
+          <li>After <em>depth</em> rounds, assert cursor == public root.</li>
+        </ol>
+      </div>
+    </div>
+
+    <h3 style="margin-top:64px">merkle.circom</h3>
+    <div class="grid-2" style="margin-top:18px;grid-template-columns:1.4fr 1fr">
+      <pre class="code">pragma circom 2.1.6;
+<span class="kw">include</span> <span class="str">"circomlib/circuits/poseidon.circom"</span>;
+
+<span class="cm">// Pick the correct ordering for one Merkle level.</span>
+<span class="kw">template</span> <span class="fn">DualMux</span>() {
+    <span class="kw">signal input</span>  in[2];
+    <span class="kw">signal input</span>  s;     <span class="cm">// 0 = leaf left, 1 = right</span>
+    <span class="kw">signal output</span> out[2];
+
+    s <span class="op">*</span> (1 <span class="op">-</span> s) <span class="op">===</span> 0;       <span class="cm">// force s ∈ {0,1}</span>
+    out[0] <span class="op">&lt;==</span> (in[1] <span class="op">-</span> in[0]) <span class="op">*</span> s <span class="op">+</span> in[0];
+    out[1] <span class="op">&lt;==</span> (in[0] <span class="op">-</span> in[1]) <span class="op">*</span> s <span class="op">+</span> in[1];
+}
+
+<span class="kw">template</span> <span class="fn">MerkleProof</span>(depth) {
+    <span class="kw">signal input</span>  leaf;
+    <span class="kw">signal input</span>  pathElements[depth];
+    <span class="kw">signal input</span>  pathIndices[depth];
+    <span class="kw">signal output</span> root;
+
+    <span class="kw">component</span> mux[depth];
+    <span class="kw">component</span> hash[depth];
+    <span class="kw">signal</span>    cursor[depth + 1];
+    cursor[0] <span class="op">&lt;==</span> leaf;
+
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; depth; i++) {
+        mux[i] = <span class="fn">DualMux</span>();
+        mux[i].in[0] <span class="op">&lt;==</span> cursor[i];
+        mux[i].in[1] <span class="op">&lt;==</span> pathElements[i];
+        mux[i].s     <span class="op">&lt;==</span> pathIndices[i];
+
+        hash[i] = <span class="fn">Poseidon</span>(2);
+        hash[i].inputs[0] <span class="op">&lt;==</span> mux[i].out[0];
+        hash[i].inputs[1] <span class="op">&lt;==</span> mux[i].out[1];
+        cursor[i + 1] <span class="op">&lt;==</span> hash[i].<span class="ty">out</span>;
+    }
+    root <span class="op">&lt;==</span> cursor[depth];
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [root]} = <span class="fn">MerkleProof</span>(20);</pre>
+      <div>
+        <h4>Read it twice</h4>
+        <ul class="dash">
+          <li><strong>DualMux</strong> — a tiny gadget. <code class="inline">s*(1-s)===0</code> is the canonical &ldquo;is a bit&rdquo; constraint — without it, the prover could choose <code class="inline">s = 7</code>.</li>
+          <li><strong>cursor[]</strong> — array of intermediate signals; declared once, written once.</li>
+          <li><strong>for-loop</strong> — unrolled at compile time. <em>depth</em> is a compile-time parameter.</li>
+          <li><strong>Public:</strong> only <code class="inline">root</code>. The leaf and path stay private.</li>
+        </ul>
+        <div class="frame ink" style="margin-top:24px">
+          <span class="badge" style="color:var(--accent)">COST</span>
+          <dl class="kv" style="margin-top:8px;grid-template-columns:130px 1fr">
+            <dt>depth=20</dt><dd>~ 4,300 constraints</dd>
+            <dt>prove time</dt><dd>~ 1 s on a laptop</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./poseidon.html">← Poseidon</a>
+    <a href="./mixer.html">Mixer →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

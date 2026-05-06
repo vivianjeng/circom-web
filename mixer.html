@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mixer — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="mixer" class="dark">
+  <div class="wrap">
+    <span class="section-no" style="color:#a8a59c">§6 · Build #3 · Private membership</span>
+    <h2 style="margin-top:14px;color:var(--paper)">Mix the secret in.</h2>
+    <p class="lede" style="color:#cfccc4">A leaf isn't the user — it's a commitment to the user. The trick that makes mixers possible.</p>
+
+    <div class="grid-2" style="margin-top:48px;grid-template-columns:1fr 1.1fr">
+      <div>
+        <p>A bare-leaf membership proof shows that <em>some leaf</em> is in the set. Anyone watching deposits can correlate withdrawals to deposits 1-to-1.</p>
+        <p>Fix it: a leaf is the hash of a <strong>nullifier</strong> + a <strong>secret</strong>. The nullifier becomes a public single-use marker on withdraw — the secret stays hidden forever.</p>
+        <div class="frame" style="margin-top:24px">
+          <h4 style="color:#a8a59c">The two-hash idea</h4>
+          <pre class="code" style="margin-top:8px">commitment    = Poseidon(nullifier, secret)
+nullifierHash = Poseidon(nullifier)
+
+<span class="cm">// On withdraw, prove:</span>
+<span class="cm">// 1. commitment is in tree under public root</span>
+<span class="cm">// 2. nullifierHash matches the public one</span>
+<span class="cm">// → contract records nullifierHash → no double-spend</span></pre>
+        </div>
+      </div>
+      <pre class="code">pragma circom 2.1.6;
+<span class="kw">include</span> <span class="str">"circomlib/circuits/poseidon.circom"</span>;
+<span class="kw">include</span> <span class="str">"./merkle.circom"</span>;
+
+<span class="kw">template</span> <span class="fn">Withdraw</span>(depth) {
+    <span class="cm">// private</span>
+    <span class="kw">signal input</span>  nullifier;
+    <span class="kw">signal input</span>  secret;
+    <span class="kw">signal input</span>  pathElements[depth];
+    <span class="kw">signal input</span>  pathIndices[depth];
+    <span class="cm">// public</span>
+    <span class="kw">signal input</span>  root;
+    <span class="kw">signal input</span>  nullifierHash;
+
+    <span class="cm">// 1. commitment = Poseidon(nullifier, secret)</span>
+    <span class="kw">component</span> cm = <span class="fn">Poseidon</span>(2);
+    cm.inputs[0] <span class="op">&lt;==</span> nullifier;
+    cm.inputs[1] <span class="op">&lt;==</span> secret;
+
+    <span class="cm">// 2. that commitment is the leaf in the tree</span>
+    <span class="kw">component</span> tree = <span class="fn">MerkleProof</span>(depth);
+    tree.leaf <span class="op">&lt;==</span> cm.<span class="ty">out</span>;
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; depth; i++) {
+        tree.pathElements[i] <span class="op">&lt;==</span> pathElements[i];
+        tree.pathIndices[i]  <span class="op">&lt;==</span> pathIndices[i];
+    }
+    tree.root <span class="op">===</span> root;
+
+    <span class="cm">// 3. the public nullifierHash matches</span>
+    <span class="kw">component</span> nh = <span class="fn">Poseidon</span>(1);
+    nh.inputs[0] <span class="op">&lt;==</span> nullifier;
+    nh.<span class="ty">out</span> <span class="op">===</span> nullifierHash;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [root, nullifierHash]} = <span class="fn">Withdraw</span>(20);</pre>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./merkle.html">← Merkle</a>
+    <a href="./security.html">Security →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

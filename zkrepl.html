@@ -66,7 +66,9 @@
           <li>Compiles &amp; proves in your browser — no toolchain.</li>
           <li>Inputs live in a comment — share circuits as a single file.</li>
           <li>Built-in <code class="inline">circomlib</code> — <code class="inline">include "circomlib/poseidon.circom";</code> just works.</li>
+          <li>Include any file from GitHub via raw URL — see example below.</li>
           <li>Constraint count printed live — feel the cost of your code.</li>
+          <li><kbd style="font-family:var(--mono);font-size:12px;background:var(--ink);color:var(--paper);border-radius:4px;padding:2px 7px;letter-spacing:0.04em">⌘ Enter</kbd> to compile &amp; prove.</li>
         </ul>
         <div class="frame danger" style="margin-top:24px">
           <span class="badge" style="color:var(--danger)">CAVEAT</span>
@@ -74,6 +76,99 @@
         </div>
       </div>
     </div>
+    <h3 style="margin-top:64px">Using circomlib</h3>
+    <p style="max-width:720px">zkREPL ships with <a href="https://github.com/iden3/circomlib" target="_blank" rel="noopener">circomlib ↗</a> pre-loaded — no install, no path setup. Just <code class="inline">include</code> and use. Here: Poseidon hash of two field elements, the hash function used throughout the ZK ecosystem.</p>
+
+    <div style="border-radius:8px;overflow:hidden;border:1px solid var(--ink);background:#0f1216;margin-top:24px">
+      <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#0a0d11;border-bottom:1px solid #1a1f25">
+        <span style="width:10px;height:10px;background:#ff5f57;border-radius:50%"></span>
+        <span style="width:10px;height:10px;background:#febc2e;border-radius:50%"></span>
+        <span style="width:10px;height:10px;background:#28c840;border-radius:50%"></span>
+        <span style="margin-left:14px;font-family:var(--mono);font-size:12px;color:#7a8088">zkrepl.dev — poseidon_hash.circom</span>
+        <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:#3a4048">⌘ Enter to run</span>
+      </div>
+      <pre class="code" style="border-radius:0;border:none;margin:0;font-size:13px">pragma circom 2.1.6;
+
+<span class="kw">include</span> <span class="str">"circomlib/poseidon.circom"</span>;
+
+<span class="cm">// Poseidon(n) hashes n field elements into one.
+// It is ZK-friendly: far cheaper in constraints than SHA-256.</span>
+
+<span class="kw">template</span> <span class="fn">HashTwo</span>() {
+    <span class="kw">signal input</span>  left;
+    <span class="kw">signal input</span>  right;
+    <span class="kw">signal output</span> hash;
+
+    <span class="kw">component</span> h = <span class="fn">Poseidon</span>(2);
+    h.inputs[0] <span class="op">&lt;==</span> left;
+    h.inputs[1] <span class="op">&lt;==</span> right;
+    hash <span class="op">&lt;==</span> h.out;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [left, right]} = <span class="fn">HashTwo</span>();
+
+<span class="cm">/* INPUT = { "left": "1", "right": "2" } */</span>
+
+<span class="good">✓ compiled · 240 constraints
+✓ witness ok · hash = 7853200120776062878684798364095072458815029376092732009249414926327459813530
+✓ groth16 proof generated</span></pre>
+    </div>
+
+    <h3 style="margin-top:64px">Including libraries from GitHub</h3>
+    <p style="max-width:720px">zkREPL can fetch any <code class="inline">.circom</code> file via a raw GitHub URL. Here: 256-bit modular multiplication using <a href="https://github.com/0xPARC/circom-secp256k1" target="_blank" rel="noopener">0xPARC/circom-secp256k1 ↗</a>, with the secp256k1 prime encoded as 4 × 64-bit little-endian limbs.</p>
+
+    <div style="border-radius:8px;overflow:hidden;border:1px solid var(--ink);background:#0f1216;margin-top:24px">
+      <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#0a0d11;border-bottom:1px solid #1a1f25">
+        <span style="width:10px;height:10px;background:#ff5f57;border-radius:50%"></span>
+        <span style="width:10px;height:10px;background:#febc2e;border-radius:50%"></span>
+        <span style="width:10px;height:10px;background:#28c840;border-radius:50%"></span>
+        <span style="margin-left:14px;font-family:var(--mono);font-size:12px;color:#7a8088">zkrepl.dev — bigmult.circom</span>
+        <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:#3a4048">⌘ Enter to run</span>
+      </div>
+      <pre class="code" style="border-radius:0;border:none;margin:0;font-size:13px">pragma circom 2.1.6;
+
+<span class="kw">include</span> <span class="str">"https://raw.githubusercontent.com/0xPARC/circom-secp256k1/master/circuits/bigint.circom"</span>;
+
+<span class="cm">// BigMultModP(n, k): computes (a * b) mod p
+// where a, b, p are k-limb numbers with each limb n bits wide.
+// For (64, 4): 256-bit numbers as 4 × 64-bit limbs (little-endian).</span>
+
+<span class="kw">template</span> <span class="fn">Example</span>() {
+    <span class="kw">signal input</span>  a[4];  <span class="cm">// 256-bit input split into 4 × 64-bit limbs</span>
+    <span class="kw">signal input</span>  b[4];
+    <span class="kw">signal output</span> out[4];
+
+    <span class="cm">// secp256k1 prime p = 2^256 - 2^32 - 977
+    // in 4 × 64-bit little-endian limbs:</span>
+    <span class="kw">var</span> p[4] = [
+        18446744069414583631,  <span class="cm">// p[0] = 2^64 - 2^32 - 977</span>
+        18446744073709551615,  <span class="cm">// p[1] = 2^64 - 1</span>
+        18446744073709551615,  <span class="cm">// p[2] = 2^64 - 1</span>
+        18446744073709551615   <span class="cm">// p[3] = 2^64 - 1</span>
+    ];
+
+    <span class="kw">component</span> mult = <span class="fn">BigMultModP</span>(64, 4);
+
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; 4; i++) {
+        mult.a[i] <span class="op">&lt;==</span> a[i];
+        mult.b[i] <span class="op">&lt;==</span> b[i];
+        mult.p[i] <span class="op">&lt;==</span> p[i];
+    }
+
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; 4; i++) {
+        out[i] <span class="op">&lt;==</span> mult.out[i];
+        log(<span class="str">"out["</span>, i, <span class="str">"] ="</span>, mult.out[i]);
+    }
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [a, b]} = <span class="fn">Example</span>();
+
+<span class="cm">/* INPUT = {
+    "a": ["3", "0", "0", "0"],
+    "b": ["7", "0", "0", "0"]
+} */</span></pre>
+    </div>
+
   </div>
 </section>
 

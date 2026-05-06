@@ -47,7 +47,7 @@
         <h3 style="font-family:var(--mono);font-size:36px;color:var(--paper);margin-top:6px">&lt;--</h3>
         <p style="margin-top:10px">Computes a value for a signal. <strong>No constraint</strong> is added. Witness-only helpers.</p>
         <pre class="code" style="margin-top:14px;font-size:13px">out &lt;-- in / 7;</pre>
-        <p class="small" style="margin-top:10px;color:#ff9a8a">⚠ Dangerous on its own — the prover can lie.</p>
+        <p class="small" style="margin-top:10px"><a href="#iszero" style="color:#a8a59c">See IsZero for the safe pattern ↓</a></p>
       </div>
       <div class="frame">
         <span class="badge muted">CONSTRAIN ONLY</span>
@@ -119,6 +119,127 @@ y &lt;== a / b;      <span class="cm">// not quad.</span></pre></div>
         <pre class="code" style="margin-top:10px">signal ab;
 ab &lt;== a * b;
 y  &lt;== ab * c;</pre></div>
+    </div>
+  </div>
+</section>
+
+<section id="template-function">
+  <div class="wrap">
+    <span class="section-no">§1.2 · template vs function</span>
+    <h2 style="margin-top:14px">Two kinds of reuse.</h2>
+    <p class="lede">A <strong>template</strong> is a circuit blueprint — it produces signals and constraints. A <strong>function</strong> is a compile-time helper — it returns a number and generates nothing.</p>
+
+    <div class="grid-2" style="margin-top:40px">
+      <div>
+        <div class="frame" style="border-color:var(--accent);background:rgba(58,135,188,0.06)">
+          <span class="badge" style="color:var(--accent)">TEMPLATE — generates constraints</span>
+          <pre class="code" style="margin-top:14px;font-size:13px"><span class="kw">template</span> <span class="fn">Bits</span>(n) {
+    <span class="kw">signal input</span>  in;
+    <span class="kw">signal output</span> out[n];
+
+    <span class="kw">var</span> sum = 0;
+    <span class="kw">for</span> (<span class="kw">var</span> i = 0; i &lt; n; i++) {
+        out[i] <span class="op">&lt;--</span> (in <span class="op">&gt;&gt;</span> i) <span class="op">&amp;</span> 1;
+        out[i] <span class="op">*</span> (out[i] <span class="op">-</span> 1) <span class="op">===</span> 0;
+        sum <span class="op">+=</span> out[i] <span class="op">*</span> (2<span class="op">**</span>i);
+    }
+    sum <span class="op">===</span> in;
+}
+
+<span class="kw">component main</span> = <span class="fn">Bits</span>(8);</pre>
+        </div>
+        <ul class="dash" style="margin-top:16px">
+          <li>Has <code class="inline">signal</code> declarations — part of the witness.</li>
+          <li>Template parameters (<code class="inline">n</code>) are compile-time constants.</li>
+          <li>Instantiated with <code class="inline">component</code> — wires are connected via dot notation (<code class="inline">b.in &lt;== x</code>).</li>
+          <li>Can include other components — this is how circomlib is composed.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="frame">
+          <span class="badge muted">FUNCTION — compile-time only</span>
+          <pre class="code" style="margin-top:14px;font-size:13px"><span class="kw">function</span> <span class="fn">nbits</span>(n) {
+    <span class="kw">var</span> bits = 1;
+    <span class="kw">var</span> cur  = 2;
+    <span class="kw">while</span> (cur <span class="op">&lt;</span> n) {
+        bits<span class="op">++</span>;
+        cur  <span class="op">*=</span> 2;
+    }
+    <span class="kw">return</span> bits;
+}
+
+<span class="kw">template</span> <span class="fn">RangeBits</span>(max) {
+    <span class="kw">var</span> n = <span class="fn">nbits</span>(max); <span class="cm">// called at compile time</span>
+    <span class="kw">signal input</span> in;
+    <span class="cm">// use n to size arrays...</span>
+}</pre>
+        </div>
+        <ul class="dash" style="margin-top:16px">
+          <li>No signals, no constraints — pure computation.</li>
+          <li>Supports loops, conditionals, recursion.</li>
+          <li>Can only be called where a <code class="inline">var</code> or template parameter is expected — never on the right-hand side of <code class="inline">&lt;==</code>.</li>
+          <li>Common use: computing array sizes, bit-widths, constants.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="frame" style="margin-top:32px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <span class="badge muted">ONE-LINE RULE</span>
+      <span style="font-family:var(--mono);font-size:13px;color:var(--ink-2)">if it touches a signal → <span style="color:var(--accent)">template</span> &nbsp;·&nbsp; if it returns a number at compile time → <span style="color:var(--ink)">function</span></span>
+    </div>
+  </div>
+</section>
+
+<section id="iszero">
+  <div class="wrap">
+    <span class="section-no">§1.3 · When &lt;-- is the right tool</span>
+    <h2 style="margin-top:14px">IsZero — division inside a circuit.</h2>
+    <p class="lede">Division is not R1CS-legal, so you can't write <code class="inline">inv &lt;== 1/in</code>. The pattern: assign with <code class="inline">&lt;--</code>, then <em>prove</em> the assignment was correct with <code class="inline">===</code>.</p>
+
+    <div class="grid-2" style="margin-top:32px;grid-template-columns:1.1fr 1fr">
+      <div>
+        <pre class="code"><span class="cm">// circomlib/circuits/comparators.circom</span>
+<span class="cm">// <a href="https://github.com/iden3/circomlib/blob/master/circuits/comparators.circom" target="_blank" rel="noopener" style="color:inherit">github.com/iden3/circomlib ↗</a></span>
+
+<span class="kw">template</span> <span class="fn">IsZero</span>() {
+    <span class="kw">signal input</span>  in;
+    <span class="kw">signal output</span> out;
+    <span class="kw">signal</span>        inv;
+
+    inv <span class="op">&lt;--</span> in != 0 ? 1/in : 0;   <span class="cm">// ① assign</span>
+
+    out <span class="op">&lt;==</span> -in * inv + 1;          <span class="cm">// ② constrain</span>
+    in * out <span class="op">===</span> 0;                 <span class="cm">// ③ constrain</span>
+}</pre>
+        <p style="margin-top:14px;font-size:15px;color:var(--ink-2)">Source: <a href="https://github.com/iden3/circomlib/blob/master/circuits/comparators.circom" target="_blank" rel="noopener">iden3/circomlib comparators.circom ↗</a></p>
+      </div>
+      <div>
+        <h4>Why three lines instead of one</h4>
+        <ul class="dash">
+          <li><strong>① &lt;--</strong> computes the inverse outside the constraint system — division is fine here because it's just JavaScript arithmetic, not R1CS.</li>
+          <li><strong>② &lt;==</strong> constrains <code class="inline">out = −in·inv + 1</code>. If <code class="inline">in ≠ 0</code>, then <code class="inline">inv = 1/in</code>, so <code class="inline">out = 0</code>. If <code class="inline">in = 0</code>, then <code class="inline">out = 1</code>.</li>
+          <li><strong>③ ===</strong> adds <code class="inline">in·out = 0</code>. Together with ②, a dishonest prover cannot set <code class="inline">out = 1</code> for a non-zero <code class="inline">in</code>.</li>
+        </ul>
+        <div class="frame" style="margin-top:20px">
+          <span class="badge muted">THE RULE</span>
+          <p style="margin-top:8px;font-size:15px">Every <code class="inline">&lt;--</code> must be followed by <code class="inline">===</code> constraints that make cheating impossible. Without the constraints, the prover can assign <em>any</em> value to <code class="inline">inv</code> and the verifier would never know.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-top:40px">
+      <div class="frame">
+        <span class="badge muted">in = 0</span>
+        <p style="margin-top:8px"><code class="inline">inv = 0</code> (by assignment)<br/><code class="inline">out = −0·0 + 1 = 1</code> ✓<br/><code class="inline">0·1 = 0</code> ✓</p>
+      </div>
+      <div class="frame">
+        <span class="badge muted">in = 5</span>
+        <p style="margin-top:8px"><code class="inline">inv = 1/5</code><br/><code class="inline">out = −5·(1/5) + 1 = 0</code> ✓<br/><code class="inline">5·0 = 0</code> ✓</p>
+      </div>
+      <div class="frame" style="border-color:var(--danger)">
+        <span class="badge" style="color:var(--danger)">cheat attempt</span>
+        <p style="margin-top:8px">Prover sets <code class="inline">in = 5</code>, lies with <code class="inline">inv = 0</code> → <code class="inline">out = 1</code>.<br/>But <code class="inline">in·out = 5·1 = 5 ≠ 0</code> — constraint ③ rejects. ✗</p>
+      </div>
     </div>
   </div>
 </section>

@@ -16,8 +16,8 @@
     <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
     <div class="nav-links">
       <a href="./preflight.html">Pre-flight</a>
-      <a href="./syntax.html">Syntax</a>
       <a href="./pipeline.html">Pipeline</a>
+      <a href="./syntax.html">Syntax</a>
       <a href="./zkrepl.html">zkREPL</a>
       <a href="./poseidon.html">Poseidon</a>
       <a href="./merkle.html">Merkle</a>
@@ -34,46 +34,84 @@
     <h2 style="margin-top:14px">Install &amp; download<br/>before we start.</h2>
     <p class="lede">~10 minutes of setup, done at home — so we don&rsquo;t spend the workshop debugging Rust.</p>
 
-    <div class="grid-2" style="margin-top:48px">
-      <div>
-        <h4>A · Toolchain</h4>
-        <pre class="code"><span class="cm"># 1. Rust (circom is written in Rust)</span>
-curl --proto '=https' --tlsv1.2 -sSf \
-  https://sh.rustup.rs | sh
+    <div style="margin-top:56px;display:flex;flex-direction:column;gap:48px;max-width:860px">
 
-<span class="cm"># 2. circom 2.x — clone &amp; build</span>
-git clone https://github.com/iden3/circom.git
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 28px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;background:var(--ink);color:var(--paper);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+          <span style="flex:1;width:1px;background:var(--rule);margin:6px 0"></span>
+        </div>
+        <div style="padding-bottom:8px">
+          <h3 style="margin:6px 0 4px">Install Rust</h3>
+          <p style="margin:0 0 6px">circom is written in Rust — you need the toolchain first.</p>
+          <p class="small" style="margin:0 0 14px"><a href="https://rust-lang.org/tools/install/" target="_blank" rel="noopener">rust-lang.org/tools/install ↗</a></p>
+          <pre class="code">curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</pre>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 28px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;background:var(--ink);color:var(--paper);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+          <span style="flex:1;width:1px;background:var(--rule);margin:6px 0"></span>
+        </div>
+        <div style="padding-bottom:8px">
+          <h3 style="margin:6px 0 4px">Build &amp; install circom</h3>
+          <p style="margin:0 0 6px">Clone the repo, compile with Cargo, and install the binary.</p>
+          <p class="small" style="margin:0 0 14px">
+            <a href="https://github.com/iden3/circom" target="_blank" rel="noopener">iden3/circom ↗</a>
+            &nbsp;·&nbsp;
+            <a href="https://docs.circom.io/" target="_blank" rel="noopener">docs.circom.io ↗</a>
+          </p>
+          <pre class="code">git clone https://github.com/iden3/circom.git
 cd circom &amp;&amp; cargo build --release
-cargo install --path circom
+cargo install --path circom</pre>
+        </div>
+      </div>
 
-<span class="cm"># 3. snarkjs (proving / verifying)</span>
-npm install -g snarkjs
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 28px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;background:var(--ink);color:var(--paper);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
+          <span style="flex:1;width:1px;background:var(--rule);margin:6px 0"></span>
+        </div>
+        <div style="padding-bottom:8px">
+          <h3 style="margin:6px 0 4px">Install snarkjs</h3>
+          <p style="margin:0 0 6px">The proving &amp; verification toolkit — runs in Node.</p>
+          <p class="small" style="margin:0 0 14px">
+            <a href="https://github.com/iden3/snarkjs" target="_blank" rel="noopener">iden3/snarkjs ↗</a>
+          </p>
+          <pre class="code">npm install -g snarkjs</pre>
+        </div>
+      </div>
 
-<span class="cm"># sanity check</span>
-circom  --version
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 28px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;background:var(--ink);color:var(--paper);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
+          <span style="flex:1;width:1px;background:var(--rule);margin:6px 0"></span>
+        </div>
+        <div style="padding-bottom:8px">
+          <h3 style="margin:6px 0 4px">Download the Powers of Tau file</h3>
+          <p style="margin:0 0 14px">A trusted-setup ceremony output. Reused across all circuits — download once. <strong>2^20</strong> supports up to ~1M constraints; <strong>2^14</strong> works for small demos.</p>
+          <pre class="code">wget https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_20.ptau
+
+ls -lh powersOfTau28_hez_final_20.ptau
+<span class="cm"># → 290 MB  ✔</span></pre>
+          <p class="small" style="margin:14px 0 0">Need a different size? See the full list of available ptau files →
+            <a href="https://github.com/iden3/snarkjs#7-prepare-phase-2" target="_blank" rel="noopener">snarkjs README §7 ↗</a>
+          </p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 28px">
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;background:var(--accent);color:#fff;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">✓</span>
+        </div>
+        <div>
+          <h3 style="margin:6px 0 4px">Sanity check</h3>
+          <pre class="code">circom  --version
 snarkjs --version</pre>
+        </div>
       </div>
-      <div>
-        <h4>B · Powers of Tau</h4>
-        <pre class="code"><span class="cm"># Trusted-setup ceremony output.</span>
-<span class="cm"># 2^14 ≈ 16k constraints — fine for today.</span>
 
-wget https://hermez.s3-eu-west-1.amazonaws.com/\
-powersOfTau28_hez_final_14.ptau
-
-ls -lh powersOfTau28_hez_final_14.ptau
-<span class="cm"># → 9.2M  ✔</span></pre>
-        <ul class="dash" style="margin-top:18px">
-          <li><strong>2^14</strong> — small demos (today).</li>
-          <li><strong>2^20</strong> — production circuits (~290 MB).</li>
-          <li>Reused across many circuits — download once.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="frame" style="margin-top:32px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-      <span class="small">Stuck on install? Raise your hand — a TA will pair with you while we keep moving.</span>
-      <span class="pill solid">10 min buffer</span>
     </div>
   </div>
 </section>
@@ -81,7 +119,7 @@ ls -lh powersOfTau28_hez_final_14.ptau
 <div class="page-nav">
   <div class="page-nav-inner">
     <a href="./index.html">← Home</a>
-    <a href="./syntax.html">Syntax →</a>
+    <a href="./pipeline.html">Pipeline →</a>
   </div>
 </div>
 

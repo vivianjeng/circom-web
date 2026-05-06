@@ -16,8 +16,8 @@
     <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
     <div class="nav-links">
       <a href="./preflight.html">Pre-flight</a>
-      <a href="./syntax.html">Syntax</a>
       <a href="./pipeline.html">Pipeline</a>
+      <a href="./syntax.html">Syntax</a>
       <a href="./zkrepl.html">zkREPL</a>
       <a href="./poseidon.html">Poseidon</a>
       <a href="./merkle.html">Merkle</a>
@@ -36,53 +36,193 @@
 
     <div class="pipeline">
       <div class="step"><span class="n">01 — Author</span><span class="t">Write circuit</span><span class="d">circuit.circom<br/><span class="muted">templates &amp; signals</span></span></div>
-      <div class="step"><span class="n">02 — circom</span><span class="t">Compile</span><span class="d">.r1cs · .wasm · .sym<br/><span class="muted">circom circuit.circom --r1cs --wasm</span></span></div>
-      <div class="step ink"><span class="n">03 — snarkjs</span><span class="t">Trusted setup</span><span class="d">ptau + r1cs → .zkey<br/>vkey.json</span></div>
-      <div class="step"><span class="n">04 — Prover</span><span class="t">Witness + proof</span><span class="d">inputs.json → witness.wtns<br/>→ proof.json + public.json</span></div>
-      <div class="step"><span class="n">05 — Verifier</span><span class="t">Verify</span><span class="d">vkey + proof + public<br/><span class="muted">snarkjs / Solidity contract</span></span></div>
+      <div class="step"><span class="n">02 — circom</span><span class="t">Compile</span><span class="d"><a href="#gloss-r1cs" class="gloss">.r1cs</a> · .wasm · .sym<br/><span class="muted">circom circuit.circom --r1cs --wasm</span></span></div>
+      <div class="step ink"><span class="n">03 — snarkjs</span><span class="t"><a href="#gloss-trusted-setup" class="gloss" style="color:inherit">Trusted setup</a></span><span class="d"><a href="#gloss-ptau" class="gloss" style="color:inherit">ptau</a> + r1cs → <a href="#gloss-zkey" class="gloss" style="color:inherit">.zkey</a><br/><a href="#gloss-vkey" class="gloss" style="color:inherit">vkey.json</a></span></div>
+      <div class="step"><span class="n">04 — Prover</span><span class="t"><a href="#gloss-witness" class="gloss">Witness</a> + proof</span><span class="d">inputs.json → witness.wtns<br/>→ <a href="#gloss-proof" class="gloss">proof.json</a> + public.json</span></div>
+      <div class="step"><span class="n">05 — Verifier</span><span class="t">Verify</span><span class="d"><a href="#gloss-vkey" class="gloss">vkey</a> + <a href="#gloss-proof" class="gloss">proof</a> + public<br/><span class="muted">snarkjs / Solidity contract</span></span></div>
     </div>
 
     <div class="grid-2" style="margin-top:48px">
       <div class="frame">
         <span class="badge" style="color:var(--accent)">PROVER · runs locally, holds secrets</span>
-        <p style="margin-top:10px">Has private inputs (the witness). Runs the .wasm to compute every signal, then uses the .zkey to produce a proof. <strong>Heavy compute, runs once per claim.</strong></p>
+        <p style="margin-top:10px">Has private inputs (the <a href="#gloss-witness" class="gloss">witness</a>). Runs the .wasm to compute every signal, then uses the <a href="#gloss-zkey" class="gloss">.zkey</a> to produce a <a href="#gloss-proof" class="gloss">proof</a>. <strong>Heavy compute, runs once per claim.</strong></p>
       </div>
       <div class="frame">
         <span class="badge" style="color:var(--paper)">VERIFIER · runs anywhere, public</span>
-        <p style="margin-top:10px">Has only the verification key + the public inputs + the proof. Outputs <code class="inline">true</code> or <code class="inline">false</code>. <strong>Cheap, succinct — milliseconds, kilobytes.</strong></p>
+        <p style="margin-top:10px">Has only the <a href="#gloss-vkey" class="gloss">verification key</a> + the public inputs + the <a href="#gloss-proof" class="gloss">proof</a>. Outputs <code class="inline">true</code> or <code class="inline">false</code>. <strong>Cheap, succinct — milliseconds, kilobytes.</strong></p>
       </div>
     </div>
 
-    <h3 style="margin-top:64px;color:var(--paper)">The seven commands that ship a proof</h3>
-    <p class="muted">Bookmark this — it&rsquo;s the entire workflow.</p>
-    <pre class="code" style="margin-top:18px"><span class="cm"># 1. compile circuit → r1cs + wasm</span>
-circom circuit.circom --r1cs --wasm --sym
+  </div>
+</section>
 
-<span class="cm"># 2. setup phase 2 (uses ptau from pre-flight)</span>
-snarkjs groth16 setup circuit.r1cs powersOfTau28_hez_final_14.ptau circuit_0000.zkey
+<section id="pipeline-detail">
+  <div class="wrap">
+    <span class="section-no">§2.1 · snarkjs step-by-step</span>
+    <h2 style="margin-top:14px">Seven commands, explained.</h2>
+    <p class="lede">Every command hands off a file to the next. Lose one and nothing downstream works. Source: <a href="https://github.com/iden3/snarkjs" target="_blank" rel="noopener">iden3/snarkjs ↗</a></p>
 
-<span class="cm"># 3. contribute entropy (each prover adds randomness)</span>
-snarkjs zkey contribute circuit_0000.zkey circuit_final.zkey --name="me" -v
+    <div style="margin-top:8px;max-width:920px">
 
-<span class="cm"># 4. export the verification key (public, tiny, reused forever)</span>
-snarkjs zkey export verificationkey circuit_final.zkey verification_key.json
+      <div class="pipe-step">
+        <div class="pipe-step-num">01</div>
+        <div>
+          <h3 style="margin:4px 0 0">Compile the circuit</h3>
+          <pre class="code" style="margin:10px 0;font-size:13px">circom circuit.circom --r1cs --wasm --sym</pre>
+          <div class="pipe-io">
+            <span>reads: <code class="inline">circuit.circom</code></span>
+            <span class="arrow">→</span>
+            <span>writes: <code class="inline">circuit.r1cs</code> <code class="inline">circuit_js/circuit.wasm</code> <code class="inline">circuit.sym</code></span>
+          </div>
+          <p>Parses your Circom source and emits three artefacts. The <a href="#gloss-r1cs" class="gloss">R1CS</a> file encodes the constraint system as sparse matrices. The <code class="inline">.wasm</code> is a witness calculator — feed it your inputs and it outputs every signal value. The <code class="inline">.sym</code> maps signal indices back to names for debugging. The <code class="inline">--sym</code> flag is optional but helpful.</p>
+        </div>
+      </div>
 
-<span class="cm"># 5. compute witness from your private inputs</span>
-node circuit_js/generate_witness.js circuit_js/circuit.wasm input.json witness.wtns
+      <div class="pipe-step">
+        <div class="pipe-step-num">02</div>
+        <div>
+          <h3 style="margin:4px 0 0">Phase 2 setup — tie ptau to your circuit</h3>
+          <pre class="code" style="margin:10px 0;font-size:13px">snarkjs groth16 setup circuit.r1cs powersOfTau28_hez_final_14.ptau circuit_0000.zkey</pre>
+          <div class="pipe-io">
+            <span>reads: <code class="inline">circuit.r1cs</code> <code class="inline">powersOfTau28_hez_final_14.ptau</code></span>
+            <span class="arrow">→</span>
+            <span>writes: <code class="inline">circuit_0000.zkey</code></span>
+          </div>
+          <p>Combines the universal <a href="#gloss-ptau" class="gloss">Powers of Tau</a> file with this circuit&rsquo;s <a href="#gloss-r1cs" class="gloss">R1CS</a> to produce the initial <a href="#gloss-zkey" class="gloss">proving key</a> (Phase 2 of the <a href="#gloss-trusted-setup" class="gloss">trusted setup</a>). The <code class="inline">_0000</code> suffix signals zero contributions so far. The ptau size must be large enough: 2<sup>k</sup> &ge; constraint count. A 2<sup>14</sup> ptau covers up to ~16 k constraints — fine for demos.</p>
+        </div>
+      </div>
 
-<span class="cm"># 6. produce the proof</span>
-snarkjs groth16 prove circuit_final.zkey witness.wtns proof.json public.json
+      <div class="pipe-step">
+        <div class="pipe-step-num">03</div>
+        <div>
+          <h3 style="margin:4px 0 0">Contribute entropy</h3>
+          <pre class="code" style="margin:10px 0;font-size:13px">snarkjs zkey contribute circuit_0000.zkey circuit_final.zkey --name="me" -v</pre>
+          <div class="pipe-io">
+            <span>reads: <code class="inline">circuit_0000.zkey</code></span>
+            <span class="arrow">→</span>
+            <span>writes: <code class="inline">circuit_final.zkey</code></span>
+          </div>
+          <p>Each contributor folds fresh randomness into the <a href="#gloss-zkey" class="gloss">zkey</a>. Security holds as long as <em>at least one</em> contributor destroys their randomness. For production, coordinate multiple independent parties and verify the contribution chain with <code class="inline">snarkjs zkey verify</code>. For local development, a single contribution is fine.</p>
+        </div>
+      </div>
 
-<span class="cm"># 7. verify (anyone can do this — no secrets needed)</span>
-snarkjs groth16 verify verification_key.json public.json proof.json
+      <div class="pipe-step">
+        <div class="pipe-step-num">04</div>
+        <div>
+          <h3 style="margin:4px 0 0">Export the verification key</h3>
+          <pre class="code" style="margin:10px 0;font-size:13px">snarkjs zkey export verificationkey circuit_final.zkey verification_key.json</pre>
+          <div class="pipe-io">
+            <span>reads: <code class="inline">circuit_final.zkey</code></span>
+            <span class="arrow">→</span>
+            <span>writes: <code class="inline">verification_key.json</code></span>
+          </div>
+          <p>Extracts the small, public portion of the <a href="#gloss-zkey" class="gloss">zkey</a> as a <a href="#gloss-vkey" class="gloss">verification key</a>. This file contains no secrets — publish it freely. It&rsquo;s also the input to <code class="inline">snarkjs zkey export solidityverifier</code>, which generates a drop-in Solidity contract for on-chain verification.</p>
+        </div>
+      </div>
+
+      <div class="pipe-step">
+        <div class="pipe-step-num">05</div>
+        <div>
+          <h3 style="margin:4px 0 0">Compute the witness</h3>
+          <pre class="code" style="margin:10px 0;font-size:13px">node circuit_js/generate_witness.js circuit_js/circuit.wasm input.json witness.wtns</pre>
+          <div class="pipe-io">
+            <span>reads: <code class="inline">circuit.wasm</code> <code class="inline">input.json</code></span>
+            <span class="arrow">→</span>
+            <span>writes: <code class="inline">witness.wtns</code></span>
+          </div>
+          <p>Runs the WebAssembly witness calculator with your private inputs. The output <code class="inline">.wtns</code> file holds the values of every signal — public and private, plus all intermediate ones. <strong>This file stays local.</strong> The prover consumes it in the next step but never sends it to the verifier. The <a href="#gloss-witness" class="gloss">witness</a> is the secret.</p>
+        </div>
+      </div>
+
+      <div class="pipe-step">
+        <div class="pipe-step-num">06</div>
+        <div>
+          <h3 style="margin:4px 0 0">Produce the proof</h3>
+          <pre class="code" style="margin:10px 0;font-size:13px">snarkjs groth16 prove circuit_final.zkey witness.wtns proof.json public.json</pre>
+          <div class="pipe-io">
+            <span>reads: <code class="inline">circuit_final.zkey</code> <code class="inline">witness.wtns</code></span>
+            <span class="arrow">→</span>
+            <span>writes: <code class="inline">proof.json</code> <code class="inline">public.json</code></span>
+          </div>
+          <p>The heavy cryptographic step. Uses the <a href="#gloss-zkey" class="gloss">proving key</a> and <a href="#gloss-witness" class="gloss">witness</a> to compute a <a href="#gloss-groth16" class="gloss">Groth16</a> <a href="#gloss-proof" class="gloss">proof</a> — three elliptic curve points, ~800 bytes total. Also writes <code class="inline">public.json</code> (the public signal values) which travels to the verifier alongside the proof. Computation time scales with constraint count, not input size.</p>
+        </div>
+      </div>
+
+      <div class="pipe-step" style="border-bottom:1px solid var(--rule)">
+        <div class="pipe-step-num" style="background:var(--accent)">07</div>
+        <div>
+          <h3 style="margin:4px 0 0">Verify the proof</h3>
+          <pre class="code" style="margin:10px 0;font-size:13px">snarkjs groth16 verify verification_key.json public.json proof.json
 <span class="good"># [INFO]  snarkJS: OK!</span></pre>
+          <div class="pipe-io">
+            <span>reads: <code class="inline">verification_key.json</code> <code class="inline">public.json</code> <code class="inline">proof.json</code></span>
+            <span class="arrow">→</span>
+            <span>no secrets required</span>
+          </div>
+          <p>Runs three elliptic-curve pairing checks and prints <code class="inline">OK!</code> if all pass. No witness, no private inputs, no zkey — just the <a href="#gloss-vkey" class="gloss">verification key</a>, the <a href="#gloss-proof" class="gloss">proof</a>, and the public signals. This is exactly what the Solidity verifier contract does on-chain, and it takes &lt; 1 ms.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="glossary" style="padding-top:80px;padding-bottom:80px">
+  <div class="wrap">
+    <span class="section-no">§2.2 · Glossary</span>
+    <h2 style="margin-top:14px">Key terms.</h2>
+    <p class="lede" style="max-width:680px">Dotted-underlined terms throughout this page link back here.</p>
+
+    <dl class="gloss-list" style="max-width:920px">
+
+      <div>
+        <dt id="gloss-r1cs">R1CS</dt>
+        <dd><strong>Rank-1 Constraint System.</strong> The matrix format circom compiles to. Each constraint is one equation of the form <em>(A·w)(B·w) = (C·w)</em>, where <em>w</em> is the witness vector and A, B, C are sparse coefficient vectors. Groth16 operates directly on the R1CS matrices.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-witness">Witness</dt>
+        <dd>The complete assignment of every signal in the circuit — private inputs, public inputs, and all intermediate signals. A valid witness satisfies every R1CS constraint. The prover holds it; the verifier never sees it.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-ptau">Powers of Tau</dt>
+        <dd>The output of a universal <a href="#gloss-trusted-setup" class="gloss">trusted-setup</a> ceremony (Phase 1). A single ptau file encodes cryptographic randomness up to 2<sup>k</sup> constraints and can be reused across <em>any</em> circuit of that size. Iden3 runs the ceremony; the largest file supports 2<sup>28</sup> constraints.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-trusted-setup">Trusted Setup</dt>
+        <dd>A multi-party computation ceremony that generates the proving and verification keys. Security rests on at least one participant destroying their toxic waste (secret randomness). Phase 1 (<a href="#gloss-ptau" class="gloss">ptau</a>) is universal. Phase 2 (<a href="#gloss-zkey" class="gloss">zkey</a>) is circuit-specific and must be re-run if the circuit changes.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-zkey">zkey</dt>
+        <dd>The circuit-specific proving key produced by combining ptau + R1CS (Phase 2 setup). The prover uses it to generate proofs. It also contains the <a href="#gloss-vkey" class="gloss">verification key</a>. The zkey is large (scales with constraint count) and should be kept private until setup is finalised.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-vkey">Verification Key</dt>
+        <dd>A small JSON file extracted from the zkey. Contains only public parameters — no secrets. Anyone holding the vkey can verify proofs. It is also compiled into a Solidity contract for on-chain verification via <code class="inline">snarkjs zkey export solidityverifier</code>.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-groth16">Groth16</dt>
+        <dd>A zk-SNARK proving system (Groth, 2016). Proofs are constant-size — three elliptic-curve points, ~800 bytes — regardless of circuit complexity. Verification costs three pairing operations: fast everywhere, including on-chain. Requires a circuit-specific <a href="#gloss-trusted-setup" class="gloss">trusted setup</a> per circuit.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-proof">Proof</dt>
+        <dd>The three-group-element object (π_A, π_B, π_C) output by the prover. Combined with public inputs, it convinces any verifier — with overwhelming probability — that the prover knows a <a href="#gloss-witness" class="gloss">witness</a> satisfying the circuit, without revealing what that witness is.</dd>
+      </div>
+
+    </dl>
   </div>
 </section>
 
 <div class="page-nav">
   <div class="page-nav-inner">
-    <a href="./syntax.html">← Syntax</a>
-    <a href="./zkrepl.html">zkREPL →</a>
+    <a href="./preflight.html">← Pre-flight</a>
+    <a href="./syntax.html">Syntax →</a>
   </div>
 </div>
 

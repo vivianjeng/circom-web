@@ -123,11 +123,14 @@ ol.agenda li:hover{color:var(--accent)}
 .pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid var(--ink);border-radius:8px;overflow:hidden;background:#fff;margin-top:32px}
 .pipeline .step{padding:20px;border-right:1px solid var(--rule);display:flex;flex-direction:column;gap:8px;min-height:160px}
 .pipeline .step:last-child{border-right:none}
-.pipeline .step .n{font-family:var(--mono);font-size:11px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase}
-.pipeline .step .t{font-family:var(--sans);font-size:18px;font-weight:600;line-height:1.15}
+.pipeline .step .n{font-family:var(--mono);font-size:12px;letter-spacing:0.14em;color:var(--ink);text-transform:uppercase;font-weight:700}
+.pipeline .step .t{font-family:var(--sans);font-size:20px;font-weight:700;line-height:1.15;color:var(--ink)}
 .pipeline .step .d{font-family:var(--mono);font-size:11px;color:var(--ink-2);line-height:1.4;margin-top:auto}
-.pipeline .step.ink{background:var(--ink);color:var(--paper)}
-.pipeline .step.ink .n,.pipeline .step.ink .d{color:#a8a59c}
+.pipeline .step.ink{background:var(--accent);color:#fff;border-right-color:var(--accent)}
+.pipeline .step.ink .n{color:rgba(255,255,255,0.75)}
+.pipeline .step.ink .t{color:#fff}
+.pipeline .step.ink .d{color:rgba(255,255,255,0.8)}
+.pipeline .step.ink a.gloss{color:#fff;text-decoration-color:rgba(255,255,255,0.5)}
 @media (max-width: 900px){.pipeline{grid-template-columns:1fr}.pipeline .step{border-right:none;border-bottom:1px solid var(--rule)}}
 
 /* ---------- tree ---------- */
@@ -178,6 +181,22 @@ footer .wrap{display:flex;justify-content:space-between;align-items:start;flex-w
 }
 .code-copy:hover{color:#e6e1d6;border-color:#5a5f67}
 .code-copy.copied{color:#9be0a8;border-color:#9be0a8}
+
+/* ---------- glossary ---------- */
+a.gloss{color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-decoration-color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+a.gloss:hover{opacity:0.75}
+section.dark a.gloss{color:#6ab0d4;text-decoration-color:#6ab0d4}
+dl.gloss-list{margin:32px 0 0;padding:0}
+dl.gloss-list>div{display:grid;grid-template-columns:180px 1fr;gap:0 32px;padding:20px 0;border-top:1px solid var(--rule);align-items:baseline}
+dl.gloss-list dt{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);padding-top:2px}
+dl.gloss-list dd{margin:0;font-size:16px;line-height:1.6;color:var(--ink-2)}
+@media (max-width:640px){dl.gloss-list>div{grid-template-columns:1fr;gap:6px 0}}
+
+/* ---------- pipeline step (§2.1) ---------- */
+.pipe-step{display:grid;grid-template-columns:56px 1fr;gap:0 24px;padding:36px 0;border-top:1px solid var(--rule);align-items:start}
+.pipe-step-num{font-family:var(--mono);font-size:12px;font-weight:700;background:var(--ink);color:var(--paper);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:4px}
+.pipe-io{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px;font-family:var(--mono);font-size:12px;color:var(--muted);align-items:center}
+.pipe-io .arrow{color:var(--rule)}
 
 /* ---------- page nav ---------- */
 .page-nav{padding:48px 0;border-top:1px solid var(--rule)}

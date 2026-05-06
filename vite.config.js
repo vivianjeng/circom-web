@@ -6,8 +6,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        slides: resolve(__dirname, 'slides.html'),
+        main: resolve(import.meta.dirname, 'index.html'),
+        slides: resolve(import.meta.dirname, 'slides.html'),
       },
     },
   },

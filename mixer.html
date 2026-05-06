@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="./favicon.svg" />
 <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -22,7 +23,6 @@
       <a href="./zkrepl.html">zkREPL</a>
       <a href="./poseidon.html">Poseidon</a>
       <a href="./merkle.html">Merkle</a>
-      <a href="./mixer.html">Mixer</a>
       <a href="./security.html">Security</a>
       <a href="./homework.html">Homework</a>
     </div>
@@ -109,6 +109,7 @@ nullifierHash = Poseidon(nullifier)
   </div>
 </footer>
 
+<script>document.querySelectorAll(".nav-links a").forEach(function(a){if(a.href===location.href||a.pathname===location.pathname){a.classList.add("active");a.style.pointerEvents="none";}});</script>
 <script type="module" src="./copy-button.js"></script>
 </body>
 </html>

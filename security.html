@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="./favicon.svg" />
 <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -22,7 +23,6 @@
       <a href="./zkrepl.html">zkREPL</a>
       <a href="./poseidon.html">Poseidon</a>
       <a href="./merkle.html">Merkle</a>
-      <a href="./mixer.html">Mixer</a>
       <a href="./security.html">Security</a>
       <a href="./homework.html">Homework</a>
     </div>
@@ -142,9 +142,51 @@ refundSquare    <span class="op">&lt;==</span> refund    <span class="op">*</spa
   </div>
 </section>
 
+<section>
+  <div class="wrap">
+    <h3>Pre-deploy checklist</h3>
+    <p style="max-width:720px">Four questions to run through before you put a circuit on mainnet. Each one maps to a pitfall above.</p>
+
+    <div class="grid-2" style="margin-top:24px">
+      <div class="frame">
+        <span class="badge muted">INPUTS &amp; RANGE</span>
+        <ul class="dash" style="margin-top:12px">
+          <li>Every public input that enters arithmetic is range-checked with <code class="inline">Num2Bits(n)</code>.</li>
+          <li>Any comparison uses <code class="inline">LessThan(n)</code> only after range-checking both operands.</li>
+          <li>No raw <code class="inline">=== 0</code> or <code class="inline">=== 1</code> on unbounded inputs — use <code class="inline">IsZero</code> / <code class="inline">IsEqual</code>.</li>
+        </ul>
+      </div>
+      <div class="frame">
+        <span class="badge muted">CONSTRAINTS &amp; SIGNALS</span>
+        <ul class="dash" style="margin-top:12px">
+          <li>Every public signal appears in at least one <code class="inline">&lt;==</code> or <code class="inline">===</code> — no free-floating inputs.</li>
+          <li>Template parameters are guarded with <code class="inline">assert()</code> at the top of the template.</li>
+          <li>Run <code class="inline">snarkjs r1cs print</code> and check constraint count matches expectations.</li>
+        </ul>
+      </div>
+      <div class="frame">
+        <span class="badge muted">TESTING</span>
+        <ul class="dash" style="margin-top:12px">
+          <li>Write at least one test that <em>should fail</em> — pass an invalid witness and confirm the proof is rejected.</li>
+          <li>Try boundary inputs: <code class="inline">0</code>, <code class="inline">p−1</code>, <code class="inline">2ⁿ−1</code> for each signal.</li>
+          <li>Test with inputs that are one bit too wide for every <code class="inline">LessThan</code> / <code class="inline">Num2Bits</code>.</li>
+        </ul>
+      </div>
+      <div class="frame">
+        <span class="badge muted">BEFORE MAINNET</span>
+        <ul class="dash" style="margin-top:12px">
+          <li>Import only audited circomlib templates — never copy-paste partial implementations.</li>
+          <li>Use a circuit-specific Phase 2 ceremony; don't reuse another project's <code class="inline">.zkey</code>.</li>
+          <li>Get an independent audit. Underconstrained bugs are invisible to tests that don't know what to look for.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="page-nav">
   <div class="page-nav-inner">
-    <a href="./mixer.html">← Mixer</a>
+    <a href="./merkle.html">← Merkle</a>
     <a href="./homework.html">Homework →</a>
   </div>
 </div>

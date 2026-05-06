@@ -24,7 +24,7 @@ a:hover{color:var(--accent)}
 /* ---------- top nav ---------- */
 .nav{
   position:sticky;top:0;z-index:50;
-  background:rgba(244,241,234,0.88);backdrop-filter: blur(10px);
+  background:#f4f1ea;
   border-bottom:1px solid var(--rule);
 }
 .nav-inner{
@@ -36,7 +36,7 @@ a:hover{color:var(--accent)}
 .mark .dot::after{content:"";position:absolute;inset:2px;background:var(--paper);border-radius:50%}
 .nav-links{display:flex;gap:22px;font-family:var(--mono);font-size:13px;letter-spacing:0.05em}
 .nav-links a{text-decoration:none;color:var(--muted);text-transform:uppercase}
-.nav-links a:hover,.nav-links a.active{color:var(--ink)}
+.nav-links a:hover{color:var(--ink)}
 @media (max-width: 800px){.nav-links{display:none}}
 
 /* ---------- containers ---------- */
@@ -116,7 +116,6 @@ ol.agenda li{
 }
 ol.agenda li:last-child{border-bottom:1px solid var(--rule)}
 ol.agenda li .num{font-family:var(--mono);font-size:14px;color:var(--muted)}
-ol.agenda li .min{font-family:var(--mono);font-size:13px;color:var(--muted);text-align:right}
 ol.agenda li a{text-decoration:none}
 ol.agenda li:hover{color:var(--accent)}
 

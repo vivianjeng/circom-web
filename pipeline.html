@@ -36,7 +36,7 @@
 
     <div class="pipeline">
       <div class="step"><span class="n">01 — Author</span><span class="t">Write circuit</span><span class="d">circuit.circom<br/><span class="muted">templates &amp; signals</span></span></div>
-      <div class="step"><span class="n">02 — circom</span><span class="t">Compile</span><span class="d"><a href="#gloss-r1cs" class="gloss">.r1cs</a> · .wasm · .sym<br/><span class="muted">circom circuit.circom --r1cs --wasm</span></span></div>
+      <div class="step"><span class="n">02 — circom</span><span class="t">Compile</span><span class="d"><a href="#gloss-r1cs" class="gloss">.r1cs</a> · <a href="#gloss-wasm" class="gloss">.wasm</a> · <a href="#gloss-sym" class="gloss">.sym</a><br/><span class="muted">circom circuit.circom --r1cs --wasm</span></span></div>
       <div class="step ink"><span class="n">03 — snarkjs</span><span class="t"><a href="#gloss-trusted-setup" class="gloss" style="color:inherit">Trusted setup</a></span><span class="d"><a href="#gloss-ptau" class="gloss" style="color:inherit">ptau</a> + r1cs → <a href="#gloss-zkey" class="gloss" style="color:inherit">.zkey</a><br/><a href="#gloss-vkey" class="gloss" style="color:inherit">vkey.json</a></span></div>
       <div class="step"><span class="n">04 — Prover</span><span class="t"><a href="#gloss-witness" class="gloss">Witness</a> + proof</span><span class="d">inputs.json → witness.wtns<br/>→ <a href="#gloss-proof" class="gloss">proof.json</a> + public.json</span></div>
       <div class="step"><span class="n">05 — Verifier</span><span class="t">Verify</span><span class="d"><a href="#gloss-vkey" class="gloss">vkey</a> + <a href="#gloss-proof" class="gloss">proof</a> + public<br/><span class="muted">snarkjs / Solidity contract</span></span></div>
@@ -45,11 +45,36 @@
     <div class="grid-2" style="margin-top:48px">
       <div class="frame">
         <span class="badge" style="color:var(--accent)">PROVER · runs locally, holds secrets</span>
-        <p style="margin-top:10px">Has private inputs (the <a href="#gloss-witness" class="gloss">witness</a>). Runs the .wasm to compute every signal, then uses the <a href="#gloss-zkey" class="gloss">.zkey</a> to produce a <a href="#gloss-proof" class="gloss">proof</a>. <strong>Heavy compute, runs once per claim.</strong></p>
+        <p style="margin-top:10px">Has private inputs (the <a href="#gloss-witness" class="gloss">witness</a>). Runs the <a href="#gloss-wasm" class="gloss">.wasm</a> to compute every signal, then uses the <a href="#gloss-zkey" class="gloss">.zkey</a> to produce a <a href="#gloss-proof" class="gloss">proof</a>. <strong>Heavy compute, runs once per claim.</strong></p>
       </div>
       <div class="frame">
         <span class="badge" style="color:var(--paper)">VERIFIER · runs anywhere, public</span>
         <p style="margin-top:10px">Has only the <a href="#gloss-vkey" class="gloss">verification key</a> + the public inputs + the <a href="#gloss-proof" class="gloss">proof</a>. Outputs <code class="inline">true</code> or <code class="inline">false</code>. <strong>Cheap, succinct — milliseconds, kilobytes.</strong></p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:64px;color:var(--paper)">circom vs snarkjs — who does what</h3>
+    <p style="margin-top:8px;color:#cfccc4;max-width:720px">They are separate tools with a clean handoff. circom speaks the <em>language</em>; snarkjs speaks the <em>cryptography</em>.</p>
+    <div class="grid-2" style="margin-top:24px">
+      <div class="frame">
+        <span class="badge" style="color:var(--accent)">circom · the compiler</span>
+        <ul class="dash" style="margin-top:14px">
+          <li>Written in Rust, installed as a binary.</li>
+          <li>Reads <code class="inline">.circom</code> source — templates, signals, constraints.</li>
+          <li>Outputs <a href="#gloss-r1cs" class="gloss">.r1cs</a>, <a href="#gloss-wasm" class="gloss">.wasm</a>, <a href="#gloss-sym" class="gloss">.sym</a>.</li>
+          <li>Knows nothing about proving — pure compilation.</li>
+          <li>Re-run only when the circuit changes.</li>
+        </ul>
+      </div>
+      <div class="frame">
+        <span class="badge" style="color:var(--paper)">snarkjs · the toolkit</span>
+        <ul class="dash" style="margin-top:14px">
+          <li>JavaScript library — runs in Node or the browser.</li>
+          <li>Reads the artefacts circom produced.</li>
+          <li>Handles <a href="#gloss-trusted-setup" class="gloss">trusted setup</a>, witness calc, proving, verification.</li>
+          <li>Can export a Solidity verifier contract for on-chain use.</li>
+          <li>Re-run once per setup, then once per proof.</li>
+        </ul>
       </div>
     </div>
 
@@ -65,6 +90,27 @@
     <div style="margin-top:8px;max-width:920px">
 
       <div class="pipe-step">
+        <div class="pipe-step-num" style="background:var(--muted)">00</div>
+        <div>
+          <h3 style="margin:4px 0 0">Write the circuit</h3>
+          <div class="pipe-io">
+            <span>file: <code class="inline">circuit.circom</code></span>
+          </div>
+          <pre class="code" style="margin:10px 0;font-size:13px">pragma circom 2.0.0;
+
+<span class="kw">template</span> <span class="fn">Multiplier2</span>() {
+    <span class="kw">signal input</span>  a;
+    <span class="kw">signal input</span>  b;
+    <span class="kw">signal output</span> c;
+    c <span class="op">&lt;==</span> a <span class="op">*</span> b;
+}
+
+<span class="kw">component main</span> {<span class="kw">public</span> [a]} = <span class="fn">Multiplier2</span>();</pre>
+          <p>A circuit is just a text file. Define your signals and constraints, then pass it to <code class="inline">circom</code>. Every subsequent step in the pipeline reads the artefacts this produces — nothing runs without it.</p>
+        </div>
+      </div>
+
+      <div class="pipe-step">
         <div class="pipe-step-num">01</div>
         <div>
           <h3 style="margin:4px 0 0">Compile the circuit</h3>
@@ -74,7 +120,7 @@
             <span class="arrow">→</span>
             <span>writes: <code class="inline">circuit.r1cs</code> <code class="inline">circuit_js/circuit.wasm</code> <code class="inline">circuit.sym</code></span>
           </div>
-          <p>Parses your Circom source and emits three artefacts. The <a href="#gloss-r1cs" class="gloss">R1CS</a> file encodes the constraint system as sparse matrices. The <code class="inline">.wasm</code> is a witness calculator — feed it your inputs and it outputs every signal value. The <code class="inline">.sym</code> maps signal indices back to names for debugging. The <code class="inline">--sym</code> flag is optional but helpful.</p>
+          <p>Parses your Circom source and emits three artefacts. The <a href="#gloss-r1cs" class="gloss">R1CS</a> file encodes the constraint system as sparse matrices. The <a href="#gloss-wasm" class="gloss"><code class="inline">.wasm</code></a> is a witness calculator — feed it your inputs and it outputs every signal value. The <a href="#gloss-sym" class="gloss"><code class="inline">.sym</code></a> maps signal indices back to names for debugging. The <code class="inline">--sym</code> flag is optional but helpful.</p>
         </div>
       </div>
 
@@ -213,6 +259,16 @@
       <div>
         <dt id="gloss-proof">Proof</dt>
         <dd>The three-group-element object (π_A, π_B, π_C) output by the prover. Combined with public inputs, it convinces any verifier — with overwhelming probability — that the prover knows a <a href="#gloss-witness" class="gloss">witness</a> satisfying the circuit, without revealing what that witness is.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-wasm">.wasm</dt>
+        <dd>The WebAssembly witness calculator emitted by <code class="inline">circom --wasm</code>. Given your private inputs in <code class="inline">input.json</code>, it computes the value of every signal in the circuit and writes them to <code class="inline">witness.wtns</code>. Runs in Node via <code class="inline">generate_witness.js</code> and stays entirely local — the output is never sent to the verifier.</dd>
+      </div>
+
+      <div>
+        <dt id="gloss-sym">.sym</dt>
+        <dd>A symbol map emitted by <code class="inline">circom --sym</code>. Maps each signal's numeric index in the <a href="#gloss-r1cs" class="gloss">R1CS</a> back to its human-readable name (e.g. <code class="inline">main.a</code>, <code class="inline">main.out</code>). Not required for proving or verifying — useful for debugging constraint errors and reading <code class="inline">snarkjs wtns export json</code> output.</dd>
       </div>
 
     </dl>

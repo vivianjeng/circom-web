@@ -91,6 +91,51 @@ C  =  [  0    0    0    1  ]   <span class="cm">// C·w = c</span>
 
 <section>
   <div class="wrap">
+    <h3>Why evaluate at one secret point?</h3>
+    <p style="max-width:780px">Checking every coefficient of A(x)·B(x)−C(x) = H(x)·Z(x) would mean transmitting and verifying polynomials of degree proportional to the circuit size — far too large and slow. Instead, the verifier exploits the <strong>Schwartz-Zippel lemma</strong>: if two distinct polynomials of degree <em>d</em> agree at a random point, the probability of a false positive is at most d/|𝔽|, which is negligible over a large field.</p>
+
+    <div class="grid-3" style="margin-top:24px">
+      <div class="frame">
+        <span class="badge muted">THE SHORTCUT</span>
+        <p style="margin-top:8px">Instead of checking the full polynomials, the verifier only checks:</p>
+        <p style="font-family:var(--mono);font-size:14px;margin:12px 0;line-height:2">A(τ) · B(τ) − C(τ)<br/>= H(τ) · Z(τ)</p>
+        <p style="font-size:15px">One evaluation point. Constant-size proof. Same security.</p>
+      </div>
+      <div class="frame">
+        <span class="badge muted">WHAT IS τ</span>
+        <p style="margin-top:8px">τ is a field element chosen during a multi-party ceremony, used once, then <em>destroyed</em>. Nobody — not the prover, not the verifier — ever learns its value after setup. What the ceremony publishes are <strong>encrypted powers</strong>:</p>
+        <p style="font-family:var(--mono);font-size:13px;margin:12px 0">[g<sup>τ⁰</sup>, g<sup>τ¹</sup>, g<sup>τ²</sup>, …, g<sup>τⁿ</sup>]</p>
+        <p style="font-size:15px">Anyone can compute g<sup>f(τ)</sup> for any polynomial f — but nobody can extract τ.</p>
+      </div>
+      <div class="frame">
+        <span class="badge muted">POWER OF TAU — PHASE 1</span>
+        <p style="margin-top:8px">Powers of Tau is the <em>first phase</em> of the trusted setup. Its only job is to produce the encrypted powers of τ in a way that no single party ever sees τ in the clear.</p>
+        <p style="margin-top:10px;font-size:15px">Phase 2 (circuit-specific setup) then uses these powers to bake the constraint structure into the proving/verifying keys.</p>
+      </div>
+    </div>
+
+    <div class="frame" style="margin-top:32px;border-color:rgba(224,108,117,0.3);background:rgba(224,108,117,0.04)">
+      <span class="badge" style="background:rgba(224,108,117,0.15);color:#e06c75">ATTACK — WHY τ MUST STAY SECRET</span>
+      <p style="margin-top:12px;color:var(--ink)">Suppose an attacker learns τ. They want the verifier to accept a false proof — i.e., they want the check to pass at τ even though the circuit constraints are not actually satisfied:</p>
+      <div class="grid-2" style="margin-top:16px;gap:16px">
+        <div>
+          <p style="font-family:var(--mono);font-size:13px;color:var(--ink-2);margin-bottom:6px">What the attacker constructs:</p>
+          <p style="font-family:var(--mono);font-size:14px;line-height:2">A*(τ) · B*(τ) − C*(τ) = 0</p>
+          <p style="font-size:14px;margin-top:8px;color:var(--ink)">They simply pick arbitrary A*, B*, C* polynomials that happen to satisfy the equation at the single known point τ — trivially easy once τ is known.</p>
+        </div>
+        <div>
+          <p style="font-family:var(--mono);font-size:13px;color:var(--ink-2);margin-bottom:6px">But the actual constraint is violated:</p>
+          <p style="font-family:var(--mono);font-size:14px;line-height:2">A*(x) · B*(x) − C*(x) ≠ 0</p>
+          <p style="font-size:14px;margin-top:8px;color:var(--ink)">The polynomials don't correspond to any valid witness. The verifier sees only the value at τ — which was forged — and is deceived.</p>
+        </div>
+      </div>
+      <p style="margin-top:16px;font-size:14px;color:var(--ink);border-top:1px solid rgba(224,108,117,0.15);padding-top:14px">This is why the ceremony must be run by <em>many independent participants</em>: a forger would need every single participant to collude (or be compromised) to learn τ. As long as one participant is honest and destroys their share, τ is gone forever.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
     <h3>Powers of Tau — evaluate at a secret τ</h3>
     <p style="max-width:780px">To verify the identity, the verifier needs the polynomials evaluated at a secret point τ. If τ were known, a cheating prover could construct fake A(x), B(x) that pass the check without satisfying the circuit. So τ is generated inside a multi-party ceremony — then immediately destroyed (<em>toxic waste</em>).</p>
 
@@ -240,7 +285,10 @@ C  =  [  0    0    0    1  ]   <span class="cm">// C·w = c</span>
       <div class="frame">
         <span class="badge muted">WHAT THE CEREMONY PUBLISHES</span>
         <p style="font-family:var(--mono);font-size:clamp(14px,2vw,20px);margin:14px 0;letter-spacing:0.02em">[τ⁰]G · [τ¹]G · [τ²]G · … · [τᵈ]G</p>
-        <p style="font-size:15px">Elliptic-curve points — "encryptions" of powers of τ. Anyone can evaluate any polynomial <em>p</em> at τ as <code class="inline">p(τ)·G = Σ pᵢ·[τⁱ]G</code> without learning τ. These are the contents of the <code class="inline">.ptau</code> file.</p>
+        <p style="font-size:15px">Each entry is an elliptic-curve point <code class="inline">[τⁱ]G = τⁱ · G</code> — the generator <em>G</em> scaled by a <strong>power of τ</strong>. The superscript is a true exponent: τ¹ = τ, τ² = τ×τ, τ³ = τ×τ×τ, and so on — not a label or a multiplier index.</p>
+        <p style="font-size:15px;margin-top:10px">Because elliptic-curve discrete-log is hard, publishing <code class="inline">τⁱ·G</code> reveals nothing about τ itself — yet anyone can evaluate any polynomial <em>p(x) = p₀ + p₁x + p₂x² + …</em> at the secret point via:</p>
+        <p style="font-family:var(--mono);font-size:13px;margin:10px 0 6px;line-height:1.9">p(τ)·G = p₀·[τ⁰]G + p₁·[τ¹]G + p₂·[τ²]G + …<br/>       = Σ pᵢ · (τⁱ·G)</p>
+        <p style="font-size:15px">This works because scalar multiplication on the curve is linear — you can combine the published points with the polynomial's own coefficients <em>pᵢ</em> to land on the right answer, with no knowledge of τ required. These points are the contents of the <code class="inline">.ptau</code> file.</p>
       </div>
       <div class="frame">
         <span class="badge muted">WHAT THE VERIFIER CHECKS</span>

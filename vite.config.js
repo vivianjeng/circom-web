@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
 const pages = [
-  'index', 'preflight', 'syntax', 'pipeline',
+  'index', 'preflight', 'pipeline', 'math', 'syntax',
   'zkrepl', 'poseidon', 'merkle', 'mixer',
   'security', 'homework', 'slides',
 ]

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Math — Circom Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="mark" style="text-decoration:none"><span class="dot"></span>CIRCOM&nbsp;/&nbsp;TUTORIAL</a>
+    <div class="nav-links">
+      <a href="./preflight.html">Pre-flight</a>
+      <a href="./pipeline.html">Pipeline</a>
+      <a href="./math.html">Math</a>
+      <a href="./syntax.html">Syntax</a>
+      <a href="./zkrepl.html">zkREPL</a>
+      <a href="./poseidon.html">Poseidon</a>
+      <a href="./merkle.html">Merkle</a>
+      <a href="./mixer.html">Mixer</a>
+      <a href="./security.html">Security</a>
+      <a href="./homework.html">Homework</a>
+    </div>
+  </div>
+</nav>
+
+<section id="r1cs-math" class="dark">
+  <div class="wrap">
+    <span class="section-no" style="color:#a8a59c">§3 · The math</span>
+    <h2 style="margin-top:14px;color:var(--paper)">R1CS &amp; Powers of Tau.</h2>
+    <p class="lede" style="color:#cfccc4">How a constraint becomes a matrix row, a set of rows becomes a polynomial, and a polynomial is verified at a secret point — without ever revealing the secret.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h3>Every &lt;== compiles to one R1CS row</h3>
+    <p>Each constraint takes the form <strong>(A·w)(B·w) = (C·w)</strong> where <em>w</em> is the witness vector and A, B, C are sparse coefficient vectors — one row per constraint.</p>
+
+    <div class="grid-2" style="margin-top:24px;grid-template-columns:1.15fr 1fr">
+      <pre class="code" style="font-size:13px"><span class="cm">// c &lt;== a * b  →  one R1CS constraint</span>
+
+<span class="cm">// signals: [  1    a    b    c  ]</span>
+
+A  =  [  0    1    0    0  ]   <span class="cm">// A·w = a</span>
+B  =  [  0    0    1    0  ]   <span class="cm">// B·w = b</span>
+C  =  [  0    0    0    1  ]   <span class="cm">// C·w = c</span>
+
+<span class="cm">// check: a × b = c  ✓</span></pre>
+      <div>
+        <p>The first element of <em>w</em> is always 1 (the constant signal). All other signals follow in declaration order. A circuit with <em>n</em> constraints = <em>n</em> such rows stacked into three sparse matrices.</p>
+        <div class="frame" style="margin-top:16px">
+          <span class="badge muted">WHY RANK-1</span>
+          <p style="margin-top:8px;font-size:15px">Each constraint is the product of <em>two linear</em> combinations — degree 2. "Rank-1" refers to the outer-product structure A·Bᵀ in the matrix form, which is what makes these constraints efficiently provable.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h3>From rows to one polynomial identity (QAP)</h3>
+    <p>Groth16 doesn't check <em>n</em> rows one by one. It converts the matrices to polynomials via Lagrange interpolation over <em>n</em> evaluation points (roots of unity mod p), then checks <strong>one identity</strong>:</p>
+
+    <p style="font-family:var(--mono);font-size:clamp(18px,3vw,30px);margin:28px 0;letter-spacing:-0.01em">
+      A(x) · B(x) <span style="color:var(--accent)">−</span> C(x) <span style="color:var(--accent)">=</span> H(x) · Z(x)
+    </p>
+
+    <div class="grid-3" style="margin-top:8px">
+      <div class="frame">
+        <span class="badge muted">A(x), B(x), C(x)</span>
+        <p style="margin-top:8px">Witness-weighted sums of column polynomials: <code class="inline">A(x) = Σ wᵢ·Aᵢ(x)</code>, same for B and C. Each Aᵢ(x) interpolates column <em>i</em> of matrix A across all evaluation points.</p>
+      </div>
+      <div class="frame">
+        <span class="badge muted">Z(x) — vanishing polynomial</span>
+        <p style="margin-top:8px">Z(x) = (x−ω)(x−ω²)···(x−ωⁿ). Zero at every evaluation point. If <em>any</em> constraint is violated, A(x)·B(x)−C(x) is not divisible by Z(x) — no valid H(x) exists.</p>
+      </div>
+      <div class="frame">
+        <span class="badge muted">H(x) — quotient</span>
+        <p style="margin-top:8px">The prover computes H(x) = (A(x)·B(x)−C(x)) / Z(x). A valid H(x) proves <em>all n</em> constraints hold simultaneously — one polynomial check instead of n row checks.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h3>Powers of Tau — evaluate at a secret τ</h3>
+    <p style="max-width:780px">To verify the identity, the verifier needs the polynomials evaluated at a secret point τ. If τ were known, a cheating prover could construct fake A(x), B(x) that pass the check without satisfying the circuit. So τ is generated inside a multi-party ceremony — then immediately destroyed (<em>toxic waste</em>).</p>
+
+    <div style="margin-top:32px;border-radius:8px;overflow:hidden;border:1px solid var(--rule)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#0a0d11;border-bottom:1px solid #1a1f25">
+        <span style="font-family:var(--mono);font-size:12px;color:#7a8088">two polynomials — one evaluation point at τ</span>
+        <button id="poly-toggle-btn" onclick="toggleFakePolyGraph()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#7a8088;background:transparent;border:1px solid #2a2f37;border-radius:4px;padding:4px 10px;cursor:pointer;transition:color .15s,border-color .15s">reveal fake →</button>
+      </div>
+      <canvas id="poly-canvas" width="840" height="300" style="width:100%;display:block;background:#0f1216"></canvas>
+      <div style="display:flex;gap:24px;padding:10px 14px;background:#0a0d11;border-top:1px solid #1a1f25;font-family:var(--mono);font-size:12px;flex-wrap:wrap">
+        <span style="color:#5aabdc">━━ p(x) · honest polynomial (derived from valid witness)</span>
+        <span id="fake-legend-poly" style="color:#e06c75;opacity:0.3;transition:opacity .2s">━━ q(x) · any polynomial a cheater knowing τ could forge</span>
+      </div>
+    </div>
+
+    <script>
+    (function () {
+      const canvas = document.getElementById('poly-canvas');
+      const ctx = canvas.getContext('2d');
+      let showFake = false;
+
+      const CW = 840, CH = 300;
+      const PAD = { l: 22, r: 22, t: 28, b: 48 };
+      const X1 = 0.5, X2 = 7.5, Y1 = -0.2, Y2 = 1.8;
+      const TAU = 4;
+
+      function cx(x) { return PAD.l + (x - X1) / (X2 - X1) * (CW - PAD.l - PAD.r); }
+      function cy(y) { return CH - PAD.b - (y - Y1) / (Y2 - Y1) * (CH - PAD.t - PAD.b); }
+
+      /* honest polynomial — local max near x=1.5, dips to meeting point at τ=4 */
+      function p(x) { return 0.03 * x * (x - 3) * (x - 7) + 0.9; }
+      /* fake polynomial — opposite hump, same value at τ=4: q(4)=p(4)=0.54 */
+      function q(x) { return -0.04 * (x - 1) * (x - 4.5) * (x - 7) + 0.72; }
+
+      const P_TAU = p(TAU); /* 0.54 */
+
+      function drawCurve(fn, color, dashed, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash(dashed ? [10, 6] : []);
+        const N = 500;
+        for (let i = 0; i <= N; i++) {
+          const x = X1 + i / N * (X2 - X1);
+          const px = cx(x), py = cy(fn(x));
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, CW, CH);
+        ctx.fillStyle = '#0f1216';
+        ctx.fillRect(0, 0, CW, CH);
+
+        /* grid */
+        ctx.strokeStyle = '#171c22';
+        ctx.lineWidth = 1;
+        [0, 0.5, 1.0, 1.5].forEach(y => {
+          ctx.beginPath(); ctx.moveTo(PAD.l, cy(y)); ctx.lineTo(CW - PAD.r, cy(y)); ctx.stroke();
+        });
+
+        /* x-axis */
+        ctx.strokeStyle = '#2a2f37'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(PAD.l, cy(0)); ctx.lineTo(CW - PAD.r, cy(0)); ctx.stroke();
+
+        /* τ vertical line */
+        ctx.strokeStyle = showFake ? 'rgba(224,108,117,0.55)' : '#2e3540';
+        ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.moveTo(cx(TAU), PAD.t); ctx.lineTo(cx(TAU), CH - PAD.b + 6); ctx.stroke();
+        ctx.setLineDash([]);
+
+        /* τ label */
+        ctx.font = 'bold 14px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = showFake ? '#e06c75' : '#4a5060';
+        ctx.fillText('τ', cx(TAU), CH - PAD.b + 20);
+        ctx.font = '11px "JetBrains Mono", monospace';
+        ctx.fillStyle = showFake ? 'rgba(224,108,117,0.55)' : '#2e3540';
+        ctx.fillText('(secret · destroyed)', cx(TAU), CH - PAD.b + 36);
+
+        /* fake curve (behind honest) */
+        if (showFake) drawCurve(q, '#e06c75', true, 0.85);
+
+        /* honest curve */
+        drawCurve(p, '#5aabdc', false, 1);
+
+        /* meeting point dot */
+        ctx.beginPath();
+        ctx.arc(cx(TAU), cy(P_TAU), 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff'; ctx.fill();
+        ctx.strokeStyle = '#0f1216'; ctx.lineWidth = 2; ctx.stroke();
+
+        /* meeting point labels */
+        const lx = cx(TAU) + 13, ly = cy(P_TAU);
+        ctx.textAlign = 'left';
+        if (!showFake) {
+          ctx.font = '13px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#e6e1d6';
+          ctx.fillText('p(τ)', lx, ly + 5);
+        } else {
+          ctx.font = '13px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#5aabdc';
+          ctx.fillText('p(τ) = q(τ)', lx, ly - 6);
+          ctx.font = '11px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#e06c75';
+          ctx.fillText('← verifier sees only this point', lx, ly + 11);
+          ctx.fillText('    and cannot tell which curve', lx, ly + 26);
+        }
+
+        /* curve labels on left margin */
+        ctx.font = '11px "JetBrains Mono", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#5aabdc';
+        ctx.fillText('p(x)', PAD.l + 4, cy(p(X1)) - 6);
+        if (showFake) {
+          ctx.fillStyle = '#e06c75';
+          ctx.fillText('q(x)', PAD.l + 4, cy(q(X1)) + 14);
+        }
+      }
+
+      window.toggleFakePolyGraph = function () {
+        showFake = !showFake;
+        const btn = document.getElementById('poly-toggle-btn');
+        const leg = document.getElementById('fake-legend-poly');
+        if (btn) btn.textContent = showFake ? '← hide fake' : 'reveal fake →';
+        if (leg) leg.style.opacity = showFake ? '1' : '0.3';
+        draw();
+      };
+
+      draw();
+    })();
+    </script>
+
+    <div class="grid-2" style="margin-top:24px">
+      <div class="frame">
+        <span class="badge muted">WHAT THE CEREMONY PUBLISHES</span>
+        <p style="font-family:var(--mono);font-size:clamp(14px,2vw,20px);margin:14px 0;letter-spacing:0.02em">[τ⁰]G · [τ¹]G · [τ²]G · … · [τᵈ]G</p>
+        <p style="font-size:15px">Elliptic-curve points — "encryptions" of powers of τ. Anyone can evaluate any polynomial <em>p</em> at τ as <code class="inline">p(τ)·G = Σ pᵢ·[τⁱ]G</code> without learning τ. These are the contents of the <code class="inline">.ptau</code> file.</p>
+      </div>
+      <div class="frame">
+        <span class="badge muted">WHAT THE VERIFIER CHECKS</span>
+        <p style="font-size:15px;margin-top:8px">Using bilinear pairings, the verifier confirms:</p>
+        <p style="font-family:var(--mono);font-size:14px;margin:12px 0;line-height:1.8">e(π_A, π_B) =<br/>e([α]₁, [β]₂) · e(pub,[γ]₂) · e(π_C,[δ]₂)</p>
+        <p style="font-size:15px">Three pairing operations. τ was baked into the keys during setup — the verifier never needs it directly.</p>
+      </div>
+    </div>
+
+    <div class="frame" style="margin-top:32px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <span class="badge muted">THE CHAIN</span>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--ink-2);letter-spacing:0.03em">circom constraints → R1CS matrices → QAP polynomials → evaluate at τ → Groth16 pairings</span>
+    </div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <div class="page-nav-inner">
+    <a href="./pipeline.html">← Pipeline</a>
+    <a href="./syntax.html">Syntax →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="mark" style="color:var(--paper)"><span class="dot" style="background:var(--paper)"></span><span style="color:var(--paper)">CIRCOM&nbsp;/&nbsp;TUTORIAL</span></span>
+      <p style="margin-top:14px;color:#a8a59c;max-width:480px">A 60-minute step-by-step workshop. iden3 · circomlib · snarkjs.</p>
+    </div>
+    <div style="display:flex;gap:32px;color:#a8a59c">
+      <a href="./index.html">↑ Home</a>
+      <a href="https://zkrepl.dev" target="_blank" rel="noopener">zkrepl.dev ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./copy-button.js"></script>
+</body>
+</html>

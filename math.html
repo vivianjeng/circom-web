@@ -99,7 +99,7 @@ C  =  [  0    0    0    1  ]   <span class="cm">// C·w = c</span>
         <span style="font-family:var(--mono);font-size:12px;color:#7a8088">two polynomials — one evaluation point at τ</span>
         <button id="poly-toggle-btn" onclick="toggleFakePolyGraph()" style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#7a8088;background:transparent;border:1px solid #2a2f37;border-radius:4px;padding:4px 10px;cursor:pointer;transition:color .15s,border-color .15s">reveal fake →</button>
       </div>
-      <canvas id="poly-canvas" width="840" height="300" style="width:100%;display:block;background:#0f1216"></canvas>
+      <canvas id="poly-canvas" style="display:block;background:#0f1216"></canvas>
       <div style="display:flex;gap:24px;padding:10px 14px;background:#0a0d11;border-top:1px solid #1a1f25;font-family:var(--mono);font-size:12px;flex-wrap:wrap">
         <span style="color:#5aabdc">━━ p(x) · honest polynomial (derived from valid witness)</span>
         <span id="fake-legend-poly" style="color:#e06c75;opacity:0.3;transition:opacity .2s">━━ q(x) · any polynomial a cheater knowing τ could forge</span>
@@ -112,7 +112,14 @@ C  =  [  0    0    0    1  ]   <span class="cm">// C·w = c</span>
       const ctx = canvas.getContext('2d');
       let showFake = false;
 
+      const DPR = window.devicePixelRatio || 1;
       const CW = 840, CH = 300;
+      canvas.width  = CW * DPR;
+      canvas.height = CH * DPR;
+      canvas.style.width  = CW + 'px';
+      canvas.style.height = CH + 'px';
+      ctx.scale(DPR, DPR);
+
       const PAD = { l: 22, r: 22, t: 28, b: 48 };
       const X1 = 0.5, X2 = 7.5, Y1 = -0.2, Y2 = 1.8;
       const TAU = 4;

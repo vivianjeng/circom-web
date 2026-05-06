@@ -114,6 +114,48 @@ C  =  [  0    0    0    1  ]   <span class="cm">// C·w = c</span>
       </div>
     </div>
 
+    <div class="frame" style="margin-top:32px">
+      <span class="badge muted">BUT WAIT — THE PROVER DOESN'T KNOW τ EITHER</span>
+      <p style="margin-top:12px">We said the verifier checks A(τ), B(τ), C(τ). But to generate those values the prover needs to evaluate:</p>
+      <p style="font-family:var(--mono);font-size:14px;margin:14px 0;line-height:2.2">A(τ) = a₀ + a₁·τ + a₂·τ² + a₃·τ³ + …</p>
+      <p>The coefficients aᵢ come from the witness — the prover knows those. But τ is secret and destroyed. <strong>How can you plug a number you don't know into a formula?</strong></p>
+      <div class="grid-2" style="margin-top:20px;gap:16px">
+        <div style="padding:14px;border:1px solid var(--rule);border-radius:6px">
+          <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:#e06c75;margin-bottom:10px">✗ WHAT THE PROVER CANNOT DO</p>
+          <p style="font-family:var(--mono);font-size:13px;line-height:2;color:var(--ink)">a₀ + a₁ × <span style="color:#e06c75">τ</span> + a₂ × <span style="color:#e06c75">τ²</span> + …</p>
+          <p style="font-size:14px;margin-top:10px;color:var(--ink)">Direct arithmetic on τ — impossible. τ no longer exists anywhere.</p>
+        </div>
+        <div style="padding:14px;border:1px solid var(--rule);border-radius:6px">
+          <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:#56a97f;margin-bottom:10px">✓ WHAT THE PROVER CAN DO</p>
+          <p style="font-family:var(--mono);font-size:13px;line-height:2;color:var(--ink)">a₀·<span style="color:#56a97f">[1]G</span> + a₁·<span style="color:#56a97f">[τ]G</span> + a₂·<span style="color:#56a97f">[τ²]G</span> + …</p>
+          <p style="font-size:14px;margin-top:10px;color:var(--ink)">Scale the <em>published encrypted powers</em> by their own coefficients and sum — this lands on <code class="inline">[A(τ)]G</code> without ever touching τ directly.</p>
+        </div>
+      </div>
+      <p style="margin-top:16px;font-size:14px;border-top:1px solid var(--rule);padding-top:14px;color:var(--ink)">This works because scalar multiplication on an elliptic curve is <strong>linear</strong>: <code class="inline">a₁·(τ·G) = (a₁τ)·G</code>. Scaling and adding curve points produces the same result as evaluating the polynomial first, then scaling — so the prover can compute the right group element without knowing τ. This is the entire reason the encrypted powers exist.</p>
+    </div>
+
+    <div style="margin-top:32px;border:1px solid var(--rule);border-radius:8px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--rule);background:var(--surface-2,#f5f3ef)">
+        <span class="badge muted">WHY POWER OF TAU EXISTS</span>
+        <p style="margin-top:10px;font-size:15px">We need to evaluate polynomials at τ — but nobody can be allowed to <em>know</em> τ. The solution is to pre-compute and publish the powers of τ in <strong>encrypted form</strong> before the ceremony closes.</p>
+      </div>
+      <div class="grid-2" style="gap:0;border-bottom:1px solid var(--rule)">
+        <div style="padding:16px 18px;border-right:1px solid var(--rule)">
+          <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:#e06c75;margin-bottom:12px">✗ RAW NUMBERS — NEVER PUBLISHED</p>
+          <p style="font-family:var(--mono);font-size:15px;line-height:2.2;color:var(--ink)">1 &nbsp; τ &nbsp; τ² &nbsp; τ³ &nbsp; … &nbsp; τⁿ</p>
+          <p style="font-size:14px;margin-top:10px;color:var(--ink)">Giving anyone the actual values of τ, τ², … would let them forge proofs. These numbers are generated inside the ceremony and <em>immediately destroyed</em> — they are the "toxic waste."</p>
+        </div>
+        <div style="padding:16px 18px">
+          <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:#56a97f;margin-bottom:12px">✓ ENCRYPTED FORM — WHAT IS PUBLISHED</p>
+          <p style="font-family:var(--mono);font-size:15px;line-height:2.2;color:var(--ink)">[1]G &nbsp; [τ]G &nbsp; [τ²]G &nbsp; [τ³]G &nbsp; … &nbsp; [τⁿ]G</p>
+          <p style="font-size:14px;margin-top:10px;color:var(--ink)">Each value is <em>multiplied into an elliptic-curve group element</em>. You can use these points to evaluate any polynomial at τ — but reversing the multiplication to recover τ is computationally infeasible (discrete-log hardness).</p>
+        </div>
+      </div>
+      <div style="padding:14px 18px;background:var(--surface-2,#f5f3ef)">
+        <p style="font-size:14px;color:var(--ink)">The ceremony's sole output is the second row. No participant — not even the organisers — ever holds the first row in full. The <code class="inline">.ptau</code> file <em>is</em> the encrypted row.</p>
+      </div>
+    </div>
+
     <div class="frame" style="margin-top:32px;border-color:rgba(224,108,117,0.3);background:rgba(224,108,117,0.04)">
       <span class="badge" style="background:rgba(224,108,117,0.15);color:#e06c75">ATTACK — WHY τ MUST STAY SECRET</span>
       <p style="margin-top:12px;color:var(--ink)">Suppose an attacker learns τ. They want the verifier to accept a false proof — i.e., they want the check to pass at τ even though the circuit constraints are not actually satisfied:</p>
